@@ -1,5 +1,5 @@
 # HedgeDoc + DrawIO Docker Compose 配置
-# 第一阶段：使用官方镜像完成基础搭建
+# 第二阶段：使用本地编译镜像
 
 services:
   # PostgreSQL 数据库 - HedgeDoc 的数据存储
@@ -17,7 +17,8 @@ services:
 
   # HedgeDoc 协作 Markdown 编辑器
   hedgedoc:
-    image: quay.io/hedgedoc/hedgedoc:1.10.3
+    # 使用本地编译镜像
+    image: hedge_drawio/hedgedoc:local
     environment:
       # 数据库配置
       CMD_DB_URL: postgres://hedgedoc:hedgedoc_password@database:5432/hedgedoc

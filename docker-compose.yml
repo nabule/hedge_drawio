@@ -46,7 +46,7 @@ services:
   drawio:
     image: jgraph/drawio:29.2.7
     ports:
-      - "8080:8080"
+      - "8180:8080"
       - "8443:8443"
     restart: unless-stopped
     networks:
@@ -55,6 +55,7 @@ services:
 volumes:
   database:
   uploads:
+
 
 networks:
   hedgedoc-net:

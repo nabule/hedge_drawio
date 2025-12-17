@@ -51,9 +51,13 @@ COPY --from=builder --chown=hedgedoc:hedgedoc /app/locales ./locales
 COPY --from=builder --chown=hedgedoc:hedgedoc /app/public ./public
 COPY --from=builder --chown=hedgedoc:hedgedoc /app/node_modules ./node_modules
 
-# 创建上传目录
-RUN mkdir -p /hedgedoc/public/uploads && \
+# 创建上传目录（包含 drawio 子目录）
+RUN mkdir -p /hedgedoc/public/uploads/drawio && \
     chown -R hedgedoc:hedgedoc /hedgedoc/public/uploads
+
+# 复制启动脚本
+COPY --chown=hedgedoc:hedgedoc docker/hedgedoc/entrypoint.sh /hedgedoc/entrypoint.sh
+RUN chmod +x /hedgedoc/entrypoint.sh
 
 # 切换到非 root 用户
 USER hedgedoc
@@ -68,5 +72,5 @@ EXPOSE 3000
 # 使用 tini 作为 init 进程
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# 启动 HedgeDoc
-CMD ["node", "app.js"]
+# 使用启动脚本（确保目录存在）
+CMD ["/hedgedoc/entrypoint.sh"]

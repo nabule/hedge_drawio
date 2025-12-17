@@ -1,0 +1,17 @@
+
+# 编译产物和 Release 包
+*.tar.gz
+release_v*/
+
+# 临时文件
+tmp/
+.temp/
+
+# IDE
+.idea/
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log

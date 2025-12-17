@@ -1,0 +1,61 @@
+# HedgeDoc + DrawIO Docker Compose 配置
+# 第一阶段：使用官方镜像完成基础搭建
+
+services:
+  # PostgreSQL 数据库 - HedgeDoc 的数据存储
+  database:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: hedgedoc
+      POSTGRES_PASSWORD: hedgedoc_password
+      POSTGRES_DB: hedgedoc
+    volumes:
+      - database:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+  # HedgeDoc 协作 Markdown 编辑器
+  hedgedoc:
+    image: quay.io/hedgedoc/hedgedoc:1.10.3
+    environment:
+      # 数据库配置
+      CMD_DB_URL: postgres://hedgedoc:hedgedoc_password@database:5432/hedgedoc
+      # 域名配置 - 根据实际情况修改
+      CMD_DOMAIN: localhost
+      CMD_URL_ADDPORT: true
+      CMD_PROTOCOL_USESSL: false
+      # 允许匿名用户访问
+      CMD_ALLOW_ANONYMOUS: true
+      CMD_ALLOW_ANONYMOUS_EDITS: true
+      # 允许注册
+      CMD_ALLOW_EMAIL_REGISTER: true
+      # 图片上传配置
+      CMD_IMAGE_UPLOAD_TYPE: filesystem
+    volumes:
+      - uploads:/hedgedoc/public/uploads
+    ports:
+      - "3000:3000"
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+  # DrawIO 图形编辑器
+  drawio:
+    image: jgraph/drawio:29.2.7
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+volumes:
+  database:
+  uploads:
+
+networks:
+  hedgedoc-net:
+    driver: bridge

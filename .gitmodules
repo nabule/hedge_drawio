@@ -1,0 +1,6 @@
+[submodule "drawio"]
+	path = drawio
+	url = https://github.com/jgraph/drawio.git
+[submodule "hedgedoc"]
+	path = hedgedoc
+	url = https://github.com/hedgedoc/hedgedoc.git

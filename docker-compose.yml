@@ -1,5 +1,5 @@
 # HedgeDoc + DrawIO Docker Compose 配置
-# 第五阶段：支持文档打包下载和数据持久化
+# 第七阶段：支持自定义URI访问功能
 
 services:
   # PostgreSQL 数据库 - HedgeDoc 的数据存储
@@ -34,6 +34,11 @@ services:
       CMD_ALLOW_EMAIL_REGISTER: true
       # 图片上传配置
       CMD_IMAGE_UPLOAD_TYPE: filesystem
+      # 自定义URI功能（第七阶段）
+      # 访问不存在的URI时自动创建新文档
+      CMD_ALLOW_FREEURL: true
+      # 不要求登录即可使用自定义URI创建文档
+      CMD_REQUIRE_FREEURL_AUTHENTICATION: false
     volumes:
       # 上传文件持久化（包含图片和 DrawIO 文件）
       # 目录结构:

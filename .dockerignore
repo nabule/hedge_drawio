@@ -1,0 +1,23 @@
+# Docker 构建忽略文件
+# 防止冗余文件发送到构建上下文，加快构建速度
+
+# Git 子模块和源码目录
+drawio/
+.git/
+.gitmodules
+
+# 编译和发布产物
+release/
+release_v*/
+*.tar.gz
+
+# 本地临时文件
+tmp/
+.temp/
+node_modules/
+
+# IDE 和系统文件
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

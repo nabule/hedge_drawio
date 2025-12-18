@@ -2,15 +2,14 @@
 # HedgeDoc + DrawIO 编译脚本 (Linux/macOS)
 #
 # 用法:
-#   ./build.sh [target] [tag]
+#   ./build.sh [tag]
 #
 # 参数:
-#   target  构建目标: drawio, hedgedoc, all (默认: all)
 #   tag     镜像标签 (默认: local)
 #
 # 示例:
-#   ./build.sh all
-#   ./build.sh drawio v1.0.0
+#   ./build.sh
+#   ./build.sh v1.0.0
 
 set -e
 

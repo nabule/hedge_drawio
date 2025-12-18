@@ -1,19 +1,16 @@
 <# 
 .SYNOPSIS
-    HedgeDoc + DrawIO 编译脚本 (Windows PowerShell)
+    HedgeDoc 编译脚本 (Windows PowerShell)
 
 .DESCRIPTION
-    用于构建 DrawIO 和 HedgeDoc 的 Docker 镜像
-
-.PARAMETER Target
-    构建目标: drawio, hedgedoc, all (默认: all)
+    用于构建 HedgeDoc 的 Docker 镜像
 
 .PARAMETER Tag
     镜像标签 (默认: local)
 
 .EXAMPLE
-    .\build.ps1 -Target all
-    .\build.ps1 -Target drawio -Tag v1.0.0
+    .\build.ps1
+    .\build.ps1 -Tag v1.0.0
 #>
 
 param(

@@ -117,11 +117,11 @@
 
 #### 方式二：从源码构建
 
-适用于需要自定义修改的开发场景。
+适用于需要对 HedgeDoc 进行二次开发或源码修改的场景。
 
 ```bash
-# 1. 克隆仓库（包含子模块）
-git clone --recursive <repository_url>
+# 1. 克隆仓库
+git clone <repository_url>
 cd hedge_drawio
 
 # 2. 构建 HedgeDoc 镜像

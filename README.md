@@ -33,7 +33,7 @@
 | ✅ 二次编辑 | 点击已插入的图形可再次编辑 |
 | ✅ PNG 导出 | 支持将图形导出为 PNG 格式 |
 | ✅ SVG 导出 | 支持将图形导出为 SVG 格式（浅色外观、嵌入图片和字体） |
-| ❌ 格式配置 | 可配置默认导出格式和选项，目前只能在源码修改 |
+| ✅ 格式配置 | 支持通过环境变量配置导出格式（PNG/SVG）及选项 |
 
 ### 2.3 文件管理功能
 
@@ -220,6 +220,8 @@ docker compose down -v
 | `CMD_ALLOW_EMAIL_REGISTER` | `true` | 允许邮箱注册 |
 | `CMD_ALLOW_FREEURL` | `true` | 启用自定义 URI 功能 |
 | `CMD_REQUIRE_FREEURL_AUTHENTICATION` | `false` | 自定义 URI 是否需要登录 |
+| `CMD_DRAWIO_EXPORT_FORMAT` | `svg` | DrawIO 导出格式 (svg/png) |
+| `CMD_DRAWIO_KEEP_THEME` | `false` | 是否保留编辑器主题颜色 (true/false) |
 
 ---
 

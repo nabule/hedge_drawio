@@ -24,6 +24,13 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
+echo ">>> 步骤 0/3: 准备本地目录和权限..."
+mkdir -p data/database data/uploads/drawio
+# 设置权限（生产环境安全版：归属给容器内用户 10000）
+sudo chown -R 10000:10000 data/uploads
+echo "  - 已创建 data 目录并设置所有权"
+echo ""
+
 echo ">>> 步骤 1/3: 加载 Docker 镜像..."
 
 echo "  - 加载 PostgreSQL 镜像..."

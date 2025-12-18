@@ -30,10 +30,16 @@ chmod +x deploy.sh
 
 ### 服务访问
 
-部署完成后，可通过以下地址访问：
-
 - **HedgeDoc**: http://localhost:3000
 - **DrawIO**: http://localhost:8180
+
+## 数据持久化
+
+数据存储在当前目录下的 `data/` 目录中：
+- `data/database`: 数据库文件
+- `data/uploads`: 上传的图片和 DrawIO XML 源文件
+
+部署脚本会自动创建目录并设置权限（`sudo chown -R 10000:10000 data/uploads`）。
 
 ## 常用命令
 

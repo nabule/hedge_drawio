@@ -11,7 +11,7 @@ services:
       POSTGRES_DB: hedgedoc
     volumes:
       # 数据库数据持久化
-      - database:/var/lib/postgresql/data
+      - ./data/database:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - hedgedoc-net
@@ -49,7 +49,7 @@ services:
       # 目录结构:
       #   uploads/           - 普通上传图片和 DrawIO 渲染图片
       #   uploads/drawio/    - DrawIO 原始 XML 文件
-      - uploads:/hedgedoc/public/uploads
+      - ./data/uploads:/hedgedoc/public/uploads
     ports:
       - "3000:3000"
     depends_on:
@@ -67,15 +67,6 @@ services:
     restart: unless-stopped
     networks:
       - hedgedoc-net
-
-# 持久化卷定义
-# 使用 Docker 命名卷，数据存储在 /var/lib/docker/volumes/
-volumes:
-  # 数据库数据卷
-  database: # 上传文件卷（图片、DrawIO 文件）
-
-  uploads:
-
 
 networks:
   hedgedoc-net:

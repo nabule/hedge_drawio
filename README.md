@@ -133,56 +133,51 @@ docker compose up -d
 
 ### 3.2 数据持久化
 
-所有数据通过 Docker 命名卷持久化存储，容器重启后数据不会丢失。
+数据通过本地目录映射持久化存储在项目的 `data/` 目录下，容器重启后数据不会丢失，且可以直接在宿主机访问和管理文件。
 
-#### 卷配置
-
-| 卷名称 | 容器路径 | 内容 |
-|--------|----------|------|
-| `database` | `/var/lib/postgresql/data` | 数据库文件（文档、用户等） |
-| `uploads` | `/hedgedoc/public/uploads` | 上传文件和 DrawIO 文件 |
-
-#### uploads 目录结构
+#### 目录结构
 
 ```
-uploads/
-├── *.png, *.jpg, *.svg     # 普通上传图片
-├── drawio-*.svg            # DrawIO 渲染图片（SVG 格式）
-├── drawio-*.png            # DrawIO 渲染图片（PNG 格式）
-└── drawio/                 # DrawIO 原始文件
-    └── drawio-*.xml        # DrawIO XML 源文件
+data/
+├── database/               # PostgreSQL 数据库文件
+└── uploads/                # 上传文件和 DrawIO 文件
+    ├── *.png, *.jpg, *.svg     # 普通上传图片
+    ├── drawio-*.svg            # DrawIO 渲染图片（SVG 格式）
+    ├── drawio-*.png            # DrawIO 渲染图片（PNG 格式）
+    └── drawio/                 # DrawIO 原始文件
+        └── drawio-*.xml        # DrawIO XML 源文件
 ```
+
+#### 首次部署权限设置
+
+首次部署时，需要设置 `data/uploads` 目录的写入权限，否则容器内进程无法写入文件：
+
+```bash
+# 创建目录
+mkdir -p data/database data/uploads/drawio
+
+# 设置权限（方式一：开放权限，适用于开发环境）
+chmod -R 777 data/uploads
+
+# 设置权限（方式二：指定 UID，适用于生产环境）
+# 容器内 HedgeDoc 进程通常以 UID 10000 运行
+sudo chown -R 10000:10000 data/uploads
+```
+
+> **注意**：如果遇到 "保存失败: 上传失败: Internal Server Error" 错误，通常是权限问题，请检查 `data/uploads` 目录的写入权限。
 
 #### 数据备份
 
 ```bash
-# 备份数据库卷
-docker run --rm \
-  -v hedge_drawio_database:/data \
-  -v $(pwd):/backup \
-  alpine tar cvf /backup/database-backup.tar /data
-
-# 备份上传文件卷
-docker run --rm \
-  -v hedge_drawio_uploads:/data \
-  -v $(pwd):/backup \
-  alpine tar cvf /backup/uploads-backup.tar /data
+# 备份整个 data 目录
+tar cvf hedge_drawio_backup.tar data/
 ```
 
 #### 数据恢复
 
 ```bash
-# 恢复数据库卷
-docker run --rm \
-  -v hedge_drawio_database:/data \
-  -v $(pwd):/backup \
-  alpine sh -c "cd /data && tar xvf /backup/database-backup.tar --strip 1"
-
-# 恢复上传文件卷
-docker run --rm \
-  -v hedge_drawio_uploads:/data \
-  -v $(pwd):/backup \
-  alpine sh -c "cd /data && tar xvf /backup/uploads-backup.tar --strip 1"
+# 恢复 data 目录
+tar xvf hedge_drawio_backup.tar
 ```
 
 ### 3.3 常用运维命令

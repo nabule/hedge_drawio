@@ -24,7 +24,7 @@ services:
       # 数据库配置
       CMD_DB_URL: postgres://hedgedoc:hedgedoc_password@database:5432/hedgedoc
       # 域名配置 - 根据实际情况修改
-      CMD_DOMAIN: 192.168.2.118
+      CMD_DOMAIN: '192.168.2.118'
       CMD_URL_ADDPORT: 'true'
       CMD_PROTOCOL_USESSL: 'false'
       # 允许匿名用户访问
@@ -39,7 +39,9 @@ services:
       CMD_ALLOW_FREEURL: 'true'
       # 不要求登录即可使用自定义URI创建文档
       CMD_REQUIRE_FREEURL_AUTHENTICATION: 'false'
-      # DrawIO 导出配置
+      # DrawIO 配置
+      # DrawIO 端口（URL 将基于 CMD_DOMAIN 自动构建）
+      CMD_DRAWIO_PORT: '8180'
       # 导出格式: svg (默认) 或 png
       CMD_DRAWIO_EXPORT_FORMAT: svg
       # 是否保留 DrawIO 编辑器中的主题色 (false 为强制浅色/白色背景，适合深色模式兼容)

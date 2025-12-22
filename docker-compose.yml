@@ -19,7 +19,7 @@ services:
   # HedgeDoc 协作 Markdown 编辑器
   hedgedoc:
     # 使用本地编译镜像
-    image: hedge_drawio/hedgedoc:local
+    image: nabule/hedgedoc:latest
     environment:
       # 数据库配置
       CMD_DB_URL: postgres://hedgedoc:hedgedoc_password@database:5432/hedgedoc

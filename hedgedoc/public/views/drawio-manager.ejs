@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= title %> - HedgeDoc
+    </title>
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/vendor/fork-awesome/css/fork-awesome.min.css">
+    <link rel="stylesheet" href="/css/ui/drawio-manager.css">
+</head>
+
+<body>
+    <div class="drawio-manager-container">
+        <!-- 页头 -->
+        <header class="manager-header">
+            <div class="header-content">
+                <h1><i class="fa fa-sitemap"></i> DrawIO 文件管理</h1>
+                <a href="/" class="btn btn-outline-light btn-back">
+                    <i class="fa fa-home"></i> 返回首页
+                </a>
+            </div>
+        </header>
+
+        <!-- 统计卡片 -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card stat-total">
+                    <div class="stat-icon"><i class="fa fa-files-o"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-total">-</div>
+                        <div class="stat-label">总文件数</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-xml">
+                    <div class="stat-icon"><i class="fa fa-code"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-xml-size">-</div>
+                        <div class="stat-label">XML 总大小</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-image">
+                    <div class="stat-icon"><i class="fa fa-picture-o"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-image-size">-</div>
+                        <div class="stat-label">图片总大小</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-orphan">
+                    <div class="stat-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-orphan">-</div>
+                        <div class="stat-label">孤立文件</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 工具栏 -->
+        <section class="toolbar-section">
+            <div class="toolbar-left">
+                <button class="btn btn-primary" id="btn-refresh" title="刷新文件列表">
+                    <i class="fa fa-refresh"></i> 刷新
+                </button>
+                <button class="btn btn-outline-secondary" id="btn-select-all" title="全选/取消全选">
+                    <i class="fa fa-check-square-o"></i> 全选
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn btn-warning" id="btn-cleanup" title="清理所有孤立文件" disabled>
+                    <i class="fa fa-trash"></i> 清理孤立文件
+                </button>
+            </div>
+        </section>
+
+        <!-- 加载提示 -->
+        <div class="loading-overlay" id="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fa fa-spinner fa-spin"></i>
+                <span>加载中...</span>
+            </div>
+        </div>
+
+        <!-- 文件列表 -->
+        <section class="files-section">
+            <div class="files-table-wrapper">
+                <table class="files-table" id="files-table">
+                    <thead>
+                        <tr>
+                            <th class="col-checkbox"><input type="checkbox" id="checkbox-all" title="全选"></th>
+                            <th class="col-preview">预览</th>
+                            <th class="col-fileid">文件 ID</th>
+                            <th class="col-format">格式</th>
+                            <th class="col-filepath">原始文件 (XML)</th>
+                            <th class="col-filepath">渲染文件</th>
+                            <th class="col-date">创建时间</th>
+                            <th class="col-status">状态</th>
+                            <th class="col-actions">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-tbody">
+                        <!-- 动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 空状态提示 -->
+            <div class="empty-state" id="empty-state" style="display: none;">
+                <i class="fa fa-folder-open-o"></i>
+                <p>暂无 DrawIO 文件</p>
+            </div>
+        </section>
+
+        <!-- 确认删除模态框 -->
+        <div class="modal-overlay" id="modal-overlay" style="display: none;">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3 id="modal-title">确认删除</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- 动态内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="modal-cancel">取消</button>
+                    <button class="btn btn-danger" id="modal-confirm">确认删除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast 提示 -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <script src="/vendor/jquery/dist/jquery.min.js"></script>
+    <script src="/js/drawio-manager.js"></script>
+</body>
+
+</html>

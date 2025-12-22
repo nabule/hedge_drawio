@@ -1,0 +1,10 @@
+<% if (typeof drawioConfig !== 'undefined') { %>
+    <script<% if (typeof cspNonce !== 'undefined' && cspNonce) { %> nonce="<%- cspNonce %>"<% } %>>
+        window.drawioConfig = <%- JSON.stringify(drawioConfig) %>;
+    </script>
+<% } %>
+        <script src="<%= serverURL %>/js/mathjax-config-extra.js"></script>
+        <script src="<%- serverURL %>/build/MathJax/MathJax.js" defer></script>
+        <script src="<%- serverURL %>/build/MathJax/config/TeX-AMS-MML_HTMLorMML.js" defer></script>
+        <script src="<%- serverURL %>/build/MathJax/config/Safe.js" defer></script>
+        <%- include('../build/index-pack-scripts') %>

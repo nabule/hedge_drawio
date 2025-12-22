@@ -21,8 +21,32 @@ jobs:
         run: |
           chmod +x ./build.sh
           # 使用标签名作为镜像 tag
-          ./build.sh hedgedoc 
+          ./build.sh hedgedoc ${{ github.ref_name }}
+
       - name: Export and Package
         run: |
-          # 根据 build.sh 中的逻辑，镜像名为 hedge_drawio/hedgedoc
-          IMAGE_NAME=" hedge_drawio/hedgedoc:\
+          # 镜像名为 nabule/hedgedoc:版本号
+          IMAGE_NAME="nabule/hedgedoc:${{ github.ref_name }}"
+          mkdir -p release_pkg
+          docker save $IMAGE_NAME -o release_pkg/hedgedoc.tar
+          cp docker-compose.yml release_pkg/
+          cp build.sh release_pkg/deploy.sh
+          
+          # 创建说明文件
+          echo "# HedgeDoc + DrawIO ${{ github.ref_name }} 部署说明" > release_pkg/README.md
+          echo "" >> release_pkg/README.md
+          echo "## 部署步骤" >> release_pkg/README.md
+          echo "1. 加载镜像: docker load -i hedgedoc.tar" >> release_pkg/README.md
+          echo "2. 启动服务: docker compose up -d" >> release_pkg/README.md
+          
+          # 压缩
+          cd release_pkg
+          tar -cvzf ../hedge_drawio_${{ github.ref_name }}_offline.tar.gz .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hedge_drawio_${{ github.ref_name }}_offline.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true

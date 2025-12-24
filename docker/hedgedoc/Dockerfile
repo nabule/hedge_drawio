@@ -4,7 +4,7 @@
 # ================================
 # 第一阶段：安装依赖并构建前端资源
 # ================================
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # 安装构建依赖
 RUN apk add --no-cache \
@@ -32,7 +32,7 @@ RUN yarn workspaces focus --production
 # ================================
 # 第二阶段：创建精简的运行时镜像
 # ================================
-FROM node:18-alpine
+FROM node:22-alpine
 
 # 安装运行时依赖（tini 作为 init 进程）
 RUN apk add --no-cache tini

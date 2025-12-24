@@ -41,50 +41,43 @@ module.exports = {
       template: 'public/views/includes/header.ejs',
       chunks: ['font-pack', 'index-styles-pack', 'index-styles', 'index'],
       filename: path.join(__dirname, 'public/views/build/index-pack-header.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/scripts.ejs',
       chunks: ['common', 'index-pack'],
       filename: path.join(__dirname, 'public/views/build/index-pack-scripts.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/header.ejs',
       chunks: ['font-pack', 'cover-styles-pack', 'cover'],
       filename: path.join(__dirname, 'public/views/build/cover-pack-header.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/scripts.ejs',
       chunks: ['common', 'cover-pack'],
       filename: path.join(__dirname, 'public/views/build/cover-pack-scripts.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/header.ejs',
       chunks: ['font-pack', 'pretty-styles-pack', 'pretty-styles', 'pretty'],
       filename: path.join(__dirname, 'public/views/build/pretty-pack-header.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/scripts.ejs',
       chunks: ['common', 'pretty-pack'],
       filename: path.join(__dirname, 'public/views/build/pretty-pack-scripts.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/header.ejs',
       chunks: ['font-pack', 'slide-styles-pack', 'slide-styles', 'slide'],
       filename: path.join(__dirname, 'public/views/build/slide-pack-header.ejs'),
-      inject: false,
-      chunksSortMode: 'manual'
+      inject: false
     }),
     new HtmlWebpackPlugin({
       template: 'public/views/includes/scripts.ejs',
@@ -408,11 +401,9 @@ module.exports = {
         }]
       }]
   },
-  node: {
-    fs: 'empty'
-  },
+},
 
   stats: {
-    assets: false
-  }
+  assets: false
+}
 }

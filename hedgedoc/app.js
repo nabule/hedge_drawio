@@ -81,7 +81,11 @@ if (config.enableStatsApi) {
 }
 
 // socket io
-const io = require('socket.io')(server, { cookie: false })
+const io = require('socket.io')(server, {
+  cookie: false,
+  pingInterval: config.heartbeatInterval,
+  pingTimeout: config.heartbeatTimeout
+})
 
 // others
 const realtime = require('./lib/realtime.js')
@@ -273,9 +277,6 @@ io.use(passportSocketIo.authorize({
   success: realtime.onAuthorizeSuccess,
   fail: realtime.onAuthorizeFail
 }))
-// socket.io heartbeat
-io.set('heartbeat interval', config.heartbeatInterval)
-io.set('heartbeat timeout', config.heartbeatTimeout)
 // socket.io connection
 io.sockets.on('connection', realtime.connection)
 
@@ -350,8 +351,7 @@ function handleTermSignals() {
   alreadyHandlingTermSignals = true
   realtime.maintenance = true
   // disconnect all socket.io clients
-  Object.keys(io.sockets.sockets).forEach(function (key) {
-    const socket = io.sockets.sockets[key]
+  io.sockets.sockets.forEach(function (socket) {
     // notify client server going into maintenance status
     socket.emit('maintenance')
     setTimeout(function () {

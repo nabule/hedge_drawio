@@ -32,7 +32,7 @@ echo ""
 build_hedgedoc() {
     echo ">>> 开始构建 HedgeDoc 镜像..."
     
-    IMAGE_NAME="nabule/hedgedoc:$TAG"
+    IMAGE_NAME="nabule/hedge_drawio:$TAG"
     
     # 构建镜像
     docker build -t "$IMAGE_NAME" -f "$PROJECT_ROOT/docker/hedgedoc/Dockerfile" "$PROJECT_ROOT"

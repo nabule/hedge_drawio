@@ -85,6 +85,7 @@ import getUIElements from './lib/editor/ui-elements'
 import modeType from './lib/modeType'
 import appState from './lib/appState'
 import drawioEditor, { getDrawioFileIdFromUrl, isDrawioImage } from './lib/editor/drawio'
+import mindmapEditor, { getMindmapFileIdFromUrl, isMindmapImage } from './lib/editor/mindmap'
 
 require('../vendor/showup/showup')
 
@@ -3506,6 +3507,9 @@ function updateViewInner() {
   // DrawIO 图片点击事件绑定（二次编辑）
   bindDrawioImageClickEvents(ui.area.markdown)
 
+  // 思维导图图片点击事件绑定（二次编辑）
+  bindMindmapImageClickEvents(ui.area.markdown)
+
   autoLinkify(ui.area.markdown)
   deduplicatedHeaderId(ui.area.markdown)
   renderTOC(ui.area.markdown)
@@ -3554,6 +3558,60 @@ function bindDrawioImageClickEvents(container) {
 
         // 打开 DrawIO 编辑器进行二次编辑
         drawioEditor.open({
+          fileId: fileId,
+          onSave: function (result) {
+            // 更新编辑器中的图片 URL（添加时间戳强制刷新）
+            const newUrl = result.imageUrl + '?t=' + Date.now()
+
+            // 在编辑器中查找并替换图片 URL
+            const content = editor.getValue()
+            // 支持 .png 和 .svg 两种格式
+            const oldUrlPattern = new RegExp(
+              '!\\[([^\\]]*)\\]\\([^)]*' + fileId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.(png|svg)[^)]*\\)',
+              'g'
+            )
+            const newContent = content.replace(oldUrlPattern, '![$1](' + newUrl + ')')
+
+            if (content !== newContent) {
+              editor.setValue(newContent)
+            }
+          }
+        })
+      })
+    }
+  })
+}
+
+/**
+ * 绑定思维导图图片点击事件（用于二次编辑）
+ * @param {jQuery} container - 包含图片的容器
+ */
+function bindMindmapImageClickEvents(container) {
+  // 查找所有图片
+  container.find('img').each(function () {
+    const $img = $(this)
+    const src = $img.attr('src')
+
+    // 检查是否是思维导图图片
+    if (src && isMindmapImage(src)) {
+      // 添加可编辑样式
+      $img.addClass('mindmap-editable')
+      $img.attr('title', '点击编辑思维导图')
+      $img.css('cursor', 'pointer')
+
+      // 移除旧的事件监听（防止重复绑定）
+      $img.off('click.mindmap')
+
+      // 绑定点击事件
+      $img.on('click.mindmap', function (e) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        const fileId = getMindmapFileIdFromUrl(src)
+        if (!fileId) return
+
+        // 打开思维导图编辑器进行二次编辑
+        mindmapEditor.open({
           fileId: fileId,
           onSave: function (result) {
             // 更新编辑器中的图片 URL（添加时间戳强制刷新）

@@ -90,9 +90,11 @@ import config from './config'
 import statusBarTemplate from './statusbar.html'
 import toolBarTemplate from './toolbar.html'
 import drawioEditor from './drawio'
+import mindmapEditor from './mindmap'
 
 import '../../../css/ui/toolbar.css'
 import '../../../css/ui/drawio.css'
+import '../../../css/ui/mindmap.css'
 
 /* config section */
 const isMac = CodeMirror.keyMap.default === CodeMirror.keyMap.macDefault
@@ -318,6 +320,18 @@ export default class Editor {
         onSave: (result) => {
           // 插入 Markdown 图片语法
           const markdown = `![DrawIO Diagram](${result.imageUrl})`
+          utils.insertText(this.editor, '\n' + markdown + '\n')
+        }
+      })
+    })
+
+    // 思维导图按钮点击事件
+    const makeMindmap = $('#makeMindmap')
+    makeMindmap.click(() => {
+      mindmapEditor.open({
+        onSave: (result) => {
+          // 插入 Markdown 图片语法
+          const markdown = `![Mind Map](${result.imageUrl})`
           utils.insertText(this.editor, '\n' + markdown + '\n')
         }
       })

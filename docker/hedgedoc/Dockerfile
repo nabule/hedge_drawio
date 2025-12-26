@@ -51,8 +51,8 @@ COPY --from=builder --chown=hedgedoc:hedgedoc /app/locales ./locales
 COPY --from=builder --chown=hedgedoc:hedgedoc /app/public ./public
 COPY --from=builder --chown=hedgedoc:hedgedoc /app/node_modules ./node_modules
 
-# 创建上传目录（包含 drawio 子目录）
-RUN mkdir -p /hedgedoc/public/uploads/drawio && \
+# 创建上传目录（包含 drawio 和 mindmap 子目录）
+RUN mkdir -p /hedgedoc/public/uploads/drawio /hedgedoc/public/uploads/mindmap && \
     chown -R hedgedoc:hedgedoc /hedgedoc/public/uploads
 
 # 复制启动脚本

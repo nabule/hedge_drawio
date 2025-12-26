@@ -339,6 +339,20 @@ module.exports = {
         test: /\.js$/,
         use: [{ loader: 'babel-loader' }],
         exclude: [/node_modules/, /public\/vendor/]
+      },
+      // 使用 esbuild-loader 转译 mind-elixir 和 snapdom 模块（它们使用现代 ES 语法）
+      {
+        test: /\.js$/,
+        include: [
+          /node_modules[/\\]mind-elixir/,
+          /node_modules[/\\]@zumer[/\\]snapdom/
+        ],
+        use: [{
+          loader: 'esbuild-loader',
+          options: {
+            target: 'es2015'
+          }
+        }]
       }, {
         test: /\.css$/,
         use: [

@@ -311,3 +311,182 @@ imageRouter.get('/drawio/:fileId', function (req, res) {
     return errors.errorInternalError(res)
   }
 })
+
+// ========== Mind Elixir 思维导图集成 API ==========
+
+// 思维导图文件存储目录
+const mindmapDir = path.join(config.uploadsPath, 'mindmap')
+
+// 确保思维导图目录存在
+function ensureMindmapDir() {
+  if (!fs.existsSync(mindmapDir)) {
+    fs.mkdirSync(mindmapDir, { recursive: true })
+    logger.info(`创建思维导图存储目录: ${mindmapDir}`)
+  }
+}
+
+// 上传思维导图（包含 JSON 数据和 PNG 图片）
+imageRouter.post('/uploadmindmap', function (req, res) {
+  if (
+    !req.isAuthenticated() &&
+    !config.allowAnonymous &&
+    !config.allowAnonymousEdits
+  ) {
+    logger.error('Mindmap upload error: Anonymous edits are not allowed')
+    return errors.errorForbidden(res)
+  }
+
+  ensureMindmapDir()
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hedgedoc-mindmap-'))
+  const form = formidable({
+    keepExtensions: true,
+    uploadDir: tmpDir,
+    maxFileSize: 10 * 1024 * 1024 // 10MB 限制
+  })
+
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      logger.error(`Mindmap upload error: formidable error: ${err}`)
+      rimraf.sync(tmpDir)
+      return errors.errorForbidden(res)
+    }
+
+    try {
+      // 获取 JSON 数据
+      let jsonData = fields.json
+      if (Array.isArray(jsonData)) {
+        jsonData = jsonData[0]
+      }
+
+      // 获取图片数据（Base64 格式）
+      let imageData = fields.image
+      if (Array.isArray(imageData)) {
+        imageData = imageData[0]
+      }
+
+      // 获取导出格式（默认为 png）
+      let format = fields.format
+      if (Array.isArray(format)) {
+        format = format[0]
+      }
+      format = format || 'png'
+
+      // 获取可选的文件 ID（用于更新已有图形）
+      let fileId = fields.fileId
+      if (Array.isArray(fileId)) {
+        fileId = fileId[0]
+      }
+
+      if (!jsonData || !imageData) {
+        logger.error('Mindmap upload error: Missing json or image data')
+        rimraf.sync(tmpDir)
+        return errors.errorBadRequest(res)
+      }
+
+      // 生成或使用已有的文件 ID
+      if (!fileId) {
+        fileId = 'mindmap-' + uuidv4()
+      }
+
+      // 验证 JSON 数据格式
+      try {
+        JSON.parse(jsonData)
+      } catch (parseErr) {
+        logger.error('Mindmap upload error: Invalid JSON data')
+        rimraf.sync(tmpDir)
+        return errors.errorBadRequest(res)
+      }
+
+      // 保存 JSON 文件
+      const jsonPath = path.join(mindmapDir, fileId + '.json')
+      fs.writeFileSync(jsonPath, jsonData, 'utf8')
+      logger.debug(`Mindmap JSON saved: ${jsonPath}`)
+
+      // 保存图片文件
+      let base64Data, ext
+      if (format === 'svg') {
+        base64Data = imageData.replace(/^data:image\/svg\+xml;base64,/, '')
+        ext = '.svg'
+      } else {
+        base64Data = imageData.replace(/^data:image\/png;base64,/, '')
+        ext = '.png'
+      }
+
+      const imageBuffer = Buffer.from(base64Data, 'base64')
+      const imagePath = path.join(config.uploadsPath, fileId + ext)
+      fs.writeFileSync(imagePath, imageBuffer)
+      logger.debug(`Mindmap image saved: ${imagePath}`)
+
+      rimraf.sync(tmpDir)
+
+      // 构建返回的 URL
+      const imageUrl = (new URL(fileId + ext, config.serverURL + '/uploads/')).href
+
+      logger.info(`思维导图上传成功: ${fileId} (${format})`)
+      res.send({
+        fileId: fileId,
+        imageUrl: imageUrl
+      })
+    } catch (e) {
+      logger.error(`Mindmap upload error: ${e.message}`)
+      rimraf.sync(tmpDir)
+
+      // 检测错误类型，返回友好的错误信息
+      let errorType = 'unknown'
+      let errorMessage = '保存失败，请重试'
+      let errorHint = ''
+
+      if (e.code === 'EACCES' || e.message.includes('permission denied')) {
+        errorType = 'permission'
+        errorMessage = '权限不足，无法写入文件'
+        errorHint = '请检查 data/uploads 目录的写入权限。运行: chmod -R 777 data/uploads'
+      } else if (e.code === 'ENOENT') {
+        errorType = 'not_found'
+        errorMessage = '目录不存在'
+        errorHint = '请检查 data/uploads 目录是否存在'
+      } else if (e.code === 'ENOSPC') {
+        errorType = 'disk_full'
+        errorMessage = '磁盘空间不足'
+        errorHint = '请清理磁盘空间后重试'
+      }
+
+      return res.status(500).json({
+        error: true,
+        type: errorType,
+        message: errorMessage,
+        hint: errorHint,
+        detail: e.message
+      })
+    }
+  })
+})
+
+// 获取思维导图 JSON 数据（用于二次编辑）
+imageRouter.get('/mindmap/:fileId', function (req, res) {
+  const fileId = req.params.fileId
+
+  // 安全检查：防止路径穿越
+  if (!fileId || fileId.includes('..') || fileId.includes('/')) {
+    return errors.errorBadRequest(res)
+  }
+
+  ensureMindmapDir()
+
+  const jsonPath = path.join(mindmapDir, fileId + '.json')
+
+  if (!fs.existsSync(jsonPath)) {
+    logger.error(`Mindmap file not found: ${jsonPath}`)
+    return errors.errorNotFound(res)
+  }
+
+  try {
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    res.set('Content-Type', 'application/json')
+    res.send(jsonData)
+  } catch (e) {
+    logger.error(`Mindmap read error: ${e.message}`)
+    return errors.errorInternalError(res)
+  }
+})
+

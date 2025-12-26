@@ -4,7 +4,8 @@
  * ZIP 导出模块
  * 
  * 将 HedgeDoc 文档及其引用的所有资源打包为 ZIP 文件
- * 包含：Markdown 文档、DrawIO 渲染图片、DrawIO 原始 XML、普通上传图片
+ * 包含：Markdown 文档、DrawIO 渲染图片、DrawIO 原始 XML、
+ *       思维导图渲染图片、思维导图原始 JSON、普通上传图片
  */
 
 const archiver = require('archiver')
@@ -48,6 +49,8 @@ function parseImageReferences(markdown) {
 
             // 检查是否是 DrawIO 图片
             const drawioMatch = filename.match(/^(drawio-[a-f0-9-]+)\.(png|svg)$/i)
+            // 检查是否是思维导图图片
+            const mindmapMatch = filename.match(/^(mindmap-[a-f0-9-]+)\.(png|svg)$/i)
 
             // 保存 URL 到 filename 的映射（用于替换）
             urlList.push({
@@ -60,7 +63,8 @@ function parseImageReferences(markdown) {
                 fileMap.set(filename, {
                     filename: filename,
                     isDrawio: !!drawioMatch,
-                    fileId: drawioMatch ? drawioMatch[1] : null
+                    isMindmap: !!mindmapMatch,
+                    fileId: drawioMatch ? drawioMatch[1] : (mindmapMatch ? mindmapMatch[1] : null)
                 })
             }
         }
@@ -135,6 +139,7 @@ async function buildZipArchive(note, res, title) {
     // 添加图片文件（使用 fileMap 确保每个文件只添加一次）
     const uploadsPath = config.uploadsPath
     const drawioDir = path.join(uploadsPath, 'drawio')
+    const mindmapDir = path.join(uploadsPath, 'mindmap')
 
     for (const [filename, fileInfo] of fileMap) {
         const imagePath = path.join(uploadsPath, filename)
@@ -157,6 +162,17 @@ async function buildZipArchive(note, res, title) {
                 logger.warn(`ZIP: DrawIO XML 不存在 ${xmlPath}`)
             }
         }
+
+        // 如果是思维导图图片，添加原始 JSON
+        if (fileInfo.isMindmap && fileInfo.fileId) {
+            const jsonPath = path.join(mindmapDir, `${fileInfo.fileId}.json`)
+            if (fs.existsSync(jsonPath)) {
+                archive.file(jsonPath, { name: `mindmap-source/${fileInfo.fileId}.json` })
+                logger.debug(`ZIP: 添加思维导图 JSON ${fileInfo.fileId}.json`)
+            } else {
+                logger.warn(`ZIP: 思维导图 JSON 不存在 ${jsonPath}`)
+            }
+        }
     }
 
     // 添加 README 说明文件
@@ -168,11 +184,13 @@ async function buildZipArchive(note, res, title) {
 - \`note-original.md\` - 原始文档（保留原始 URL）
 - \`assets/\` - 所有图片资源
 - \`drawio-source/\` - DrawIO 原始 XML 文件（可用于再次编辑）
+- \`mindmap-source/\` - 思维导图原始 JSON 文件（可用于再次编辑）
 
 ## 使用说明
 
 1. 解压后，使用 Markdown 编辑器打开 \`note.md\` 即可查看文档
 2. DrawIO 原始文件可导入 draw.io 进行编辑
+3. 思维导图 JSON 文件可导入 Mind Elixir 编辑器进行编辑
 
 导出时间: ${new Date().toISOString()}
 `

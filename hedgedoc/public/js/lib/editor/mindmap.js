@@ -159,6 +159,7 @@ export class MindmapEditor {
             this.container.style.display = 'block'
 
             // 创建 Mind Elixir 实例
+            // 使用 MindElixir.THEME（浅色主题）防止跟随浏览器 prefers-color-scheme 设置
             const options = {
                 el: this.container,
                 direction: MindElixir.LEFT,
@@ -170,6 +171,7 @@ export class MindmapEditor {
                 locale: 'zh_CN',
                 overflowHidden: false,
                 mainLinkStyle: 2,
+                theme: MindElixir.THEME, // 强制使用浅色主题，不跟随浏览器深色模式
                 contextMenuOption: {
                     focus: true,
                     link: true,

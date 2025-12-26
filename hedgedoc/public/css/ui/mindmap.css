@@ -188,54 +188,16 @@
   z-index: 100;
 }
 
-/* 夜间模式适配 */
-body.night .mindmap-modal-content {
-  background-color: #2d2d2d;
+/* 夜间模式适配 - 思维导图编辑器保持浅色背景（与 DrawIO 一致） */
+/* 仅保留必要的颜色调整，不改变背景色 */
+
+/* 右键菜单深色模式（浮层，需要与页面背景协调） */
+body.night .mindmap-container .mind-elixir-context-menu {
+  background-color: #fff;
+  border-color: #ddd;
+  color: #333;
 }
 
-body.night .mindmap-modal-header {
-  background-color: #1c1c1e;
-  border-bottom-color: #444;
-}
-
-body.night .mindmap-modal-title {
-  color: #eee;
-}
-
-body.night .mindmap-modal-btn {
-  color: #aaa;
-}
-
-body.night .mindmap-modal-close:hover {
-  color: #f66;
-}
-
-body.night .mindmap-modal-body {
-  background-color: #333;
-}
-
-body.night .mindmap-loading {
-  color: #aaa;
-}
-
-body.night .mindmap-spinner {
-  border-color: #444;
-  border-top-color: #9b59b6;
-}
-
-body.night .mindmap-exporting {
-  background-color: rgba(51, 51, 51, 0.9);
-  color: #eee;
-}
-
-/* Mind Elixir 工具栏调整 */
-.mindmap-container .mind-elixir-toolbar {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 8px;
-}
-
-body.night .mindmap-container .mind-elixir-toolbar {
-  background-color: #2d2d2d;
-  border-bottom-color: #444;
+body.night .mindmap-container .mind-elixir-context-menu .menu-item:hover {
+  background-color: #f0f0f0;
 }

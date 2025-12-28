@@ -1,0 +1,35 @@
+# 动态路由配置
+# HedgeDoc 和 DrawIO 服务路由
+#
+# 使用说明：将 example.com 替换为你的实际域名
+
+http:
+  routers:
+    # === HedgeDoc 路由 ===
+    hedgedoc:
+      rule: "Host(`md.example.com`)"
+      entryPoints:
+        - web
+      service: hedgedoc
+      tls: {}
+
+    # === DrawIO 路由 ===
+    drawio:
+      rule: "Host(`drawio.example.com`)"
+      entryPoints:
+        - web
+      service: drawio
+      tls: {}
+
+  services:
+    # HedgeDoc 服务
+    hedgedoc:
+      loadBalancer:
+        servers:
+          - url: "http://hedgedoc:3000"
+
+    # DrawIO 服务
+    drawio:
+      loadBalancer:
+        servers:
+          - url: "http://drawio:8080"

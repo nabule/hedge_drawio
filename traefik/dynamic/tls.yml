@@ -1,0 +1,15 @@
+# TLS 动态配置
+# 证书配置说明
+
+tls:
+  certificates:
+    # TLS 证书配置
+    # 请将你的证书文件放置到 traefik/certs/ 目录
+    - certFile: /certs/origin.crt
+      keyFile: /certs/origin.key
+
+  options:
+    default:
+      minVersion: VersionTLS12
+      # sniStrict 设置为 false 以兼容自签名证书
+      sniStrict: false

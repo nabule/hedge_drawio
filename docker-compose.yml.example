@@ -1,0 +1,105 @@
+# HedgeDoc + DrawIO + Traefik 网关 Docker Compose 配置
+# 支持内网 IP 访问和外网域名访问
+# 统一使用 3000 端口
+#
+# 使用方法：
+# 1. 复制此文件为 docker-compose.yml
+# 2. 修改下方 <YOUR_DOMAIN> 等占位符为实际值
+# 3. 修改 traefik/dynamic/routes.yml 中的域名
+# 4. 运行 docker compose up -d
+
+services:
+  # ============================================
+  # Traefik 反向代理网关
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    ports:
+      # 统一入口：3000 端口
+      - "3000:3000"
+      # Traefik Dashboard（仅内网访问，可选）
+      - "8080:8080"
+    volumes:
+      # Traefik 配置文件
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      # 动态配置目录（路由规则和 TLS 证书）
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      # TLS 证书目录
+      - ./traefik/certs:/certs:ro
+    networks:
+      - hedgedoc-net
+    restart: unless-stopped
+
+  # ============================================
+  # PostgreSQL 数据库 - HedgeDoc 数据存储
+  # ============================================
+  database:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: hedgedoc
+      POSTGRES_PASSWORD: <YOUR_DB_PASSWORD>
+      POSTGRES_DB: hedgedoc
+    volumes:
+      # 数据库数据持久化
+      - ./data/database:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+  # ============================================
+  # HedgeDoc 协作 Markdown 编辑器
+  # ============================================
+  hedgedoc:
+    # 使用 DockerHub 镜像或本地编译镜像
+    image: nabule/hedge_drawio:latest
+    environment:
+      # 数据库配置
+      CMD_DB_URL: postgres://hedgedoc:<YOUR_DB_PASSWORD>@database:5432/hedgedoc
+      # 域名配置 - 修改为你的域名
+      CMD_DOMAIN: '<YOUR_DOMAIN>'
+      # 端口配置 - 统一使用 3000
+      CMD_PORT: '3000'
+      # URL 中添加端口（如果使用非标准端口）
+      CMD_URL_ADDPORT: 'true'
+      # 启用 HTTPS
+      CMD_PROTOCOL_USESSL: 'true'
+      # 允许匿名用户访问
+      CMD_ALLOW_ANONYMOUS: 'true'
+      CMD_ALLOW_ANONYMOUS_EDITS: 'true'
+      # 允许注册
+      CMD_ALLOW_EMAIL_REGISTER: 'true'
+      # 图片上传配置
+      CMD_IMAGE_UPLOAD_TYPE: filesystem
+      # 自定义URI功能
+      CMD_ALLOW_FREEURL: 'true'
+      CMD_REQUIRE_FREEURL_AUTHENTICATION: 'false'
+      # DrawIO 配置
+      # 可选1：使用自托管 DrawIO（需配置 traefik 路由）
+      # CMD_DRAWIO_URL: 'https://drawio.<YOUR_DOMAIN>:3000'
+      # 可选2：使用官方 DrawIO 服务（推荐，无需自托管）
+      CMD_DRAWIO_URL: 'https://embed.diagrams.net'
+      # 导出格式: svg (默认) 或 png
+      CMD_DRAWIO_EXPORT_FORMAT: svg
+      # 是否保留 DrawIO 编辑器中的主题色
+      CMD_DRAWIO_KEEP_THEME: 'false'
+    volumes:
+      # 上传文件持久化
+      - ./data/uploads:/hedgedoc/public/uploads
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+  # ============================================
+  # DrawIO 图形编辑器（可选，如果使用官方服务可删除）
+  # ============================================
+  drawio:
+    image: jgraph/drawio:latest
+    restart: unless-stopped
+    networks:
+      - hedgedoc-net
+
+networks:
+  hedgedoc-net:
+    driver: bridge

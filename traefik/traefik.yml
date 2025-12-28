@@ -1,0 +1,24 @@
+# Traefik 静态配置
+# 用于 HedgeDoc + DrawIO 网关
+
+# API 和 Dashboard 配置
+api:
+  dashboard: true
+  insecure: true  # 内网可访问 dashboard（生产环境建议关闭）
+
+# 日志配置
+log:
+  level: INFO
+
+# 入口点配置
+entryPoints:
+  # 统一入口点：3000 端口
+  web:
+    address: ":3000"
+
+# 服务提供者配置
+providers:
+  # 使用文件配置（不依赖 Docker socket）
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true

@@ -19,3 +19,6 @@ yarn-error.log
 # Data
 data/
 *.tar
+docker-compose.yml
+traefik/certs/*.crt
+traefik/certs/*.key

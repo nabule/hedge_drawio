@@ -123,6 +123,8 @@ export class DrawioEditor {
         <div class="drawio-modal-header">
           <span class="drawio-modal-title">DrawIO 图形编辑器</span>
           <div class="drawio-modal-header-buttons">
+            <button class="drawio-modal-btn drawio-modal-copy-xml" title="复制 XML">📋</button>
+            <button class="drawio-modal-btn drawio-modal-import-xml" title="导入 XML">📥</button>
             <button class="drawio-modal-btn drawio-modal-maximize" title="最大化">&#x26F6;</button>
             <button class="drawio-modal-btn drawio-modal-close" title="关闭">&times;</button>
           </div>
@@ -156,6 +158,12 @@ export class DrawioEditor {
             this.toggleMaximize()
         })
 
+        // 绑定复制/导入 XML 事件
+        const copyXmlBtn = this.modal.querySelector('.drawio-modal-copy-xml')
+        const importXmlBtn = this.modal.querySelector('.drawio-modal-import-xml')
+        copyXmlBtn.addEventListener('click', () => this.copyXmlToClipboard())
+        importXmlBtn.addEventListener('click', () => this.showImportDialog())
+
         // 添加到页面
         document.body.appendChild(this.modal)
 
@@ -181,6 +189,62 @@ export class DrawioEditor {
             maximizeBtn.innerHTML = '&#x26F6;'  // 最大化图标
             maximizeBtn.title = '最大化'
         }
+    }
+
+    /**
+     * 复制当前 XML 到剪贴板
+     */
+    async copyXmlToClipboard() {
+        // 优先使用已加载的 XML，否则请求 DrawIO 导出
+        const xmlToCopy = this.currentXml || this.pendingXml
+
+        if (!xmlToCopy) {
+            alert('当前没有可复制的 XML 数据')
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(xmlToCopy)
+            // 显示成功提示
+            const btn = this.modal.querySelector('.drawio-modal-copy-xml')
+            const originalText = btn.textContent
+            btn.textContent = '✅'
+            setTimeout(() => {
+                btn.textContent = originalText
+            }, 1500)
+        } catch (e) {
+            console.error('复制到剪贴板失败:', e)
+            // 降级方案：使用旧的 execCommand
+            const textarea = document.createElement('textarea')
+            textarea.value = xmlToCopy
+            document.body.appendChild(textarea)
+            textarea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textarea)
+            alert('XML 已复制到剪贴板')
+        }
+    }
+
+    /**
+     * 显示导入 XML 对话框
+     */
+    showImportDialog() {
+        const xml = prompt('请粘贴 DrawIO XML 数据：\n\n（提示：XML 通常以 <mxfile 或 <mxGraphModel 开头）')
+
+        if (!xml || !xml.trim()) {
+            return
+        }
+
+        // 简单验证 XML 格式
+        const trimmedXml = xml.trim()
+        if (!trimmedXml.startsWith('<mxfile') && !trimmedXml.startsWith('<mxGraphModel')) {
+            alert('无效的 DrawIO XML 格式！\n\nXML 应以 <mxfile 或 <mxGraphModel 开头。')
+            return
+        }
+
+        // 更新当前 XML 并加载到编辑器
+        this.currentXml = trimmedXml
+        this.postMessage({ action: 'load', xml: trimmedXml })
     }
 
     /**

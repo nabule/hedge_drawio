@@ -1,9 +1,36 @@
-# 动态路由配置
-# HedgeDoc 和 DrawIO 服务路由
-#
-# 使用说明：将 example.com 替换为你的实际域名
-
 http:
+  # ==========================================
+  # 1. 定义中间件 (Middlewares)
+  # ==========================================
+  middlewares:
+    # 定义一个名为 "secure-headers" 的中间件
+    secure-headers:
+      headers:
+        # 强制重定向到 HTTPS (虽然你用了 tls: {}，加这个更保险)
+        sslRedirect: true
+        # 开启 HSTS (告诉浏览器未来一年只通过 HTTPS 访问)
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # 【关键修复】手动添加协议头
+        # 告诉 HedgeDoc："虽然我是用 HTTP 连你的，但用户是用 HTTPS 连我的"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+    
+    # --- 【新增】Basic 认证中间件 ---
+    my-auth:
+      basicAuth:
+        # 格式: "用户名:哈希密码"
+        # 注意: 如果密码中包含 $ 符号，在 docker-compose 环境变量中需要写 $$，
+        # 但在这里是 YAML 文件，直接写即可。
+        users:
+          # 使用 htpasswd 生成: htpasswd -nb admin yourpassword
+          # 请替换为你生成的字符串
+          - "admin:$apr1$XXXXXXXX$XXXXXXXXXXXXXXXXXXXXXXXX"
+
+  # ==========================================
+  # 2. 路由配置 (Routers)
+  # ==========================================
   routers:
     # === HedgeDoc 路由 ===
     hedgedoc:
@@ -12,6 +39,10 @@ http:
         - web
       service: hedgedoc
       tls: {}
+      # 【关键步骤】挂载上面定义的中间件
+      middlewares:
+        - "secure-headers"
+        - "my-auth"
 
     # === DrawIO 路由 ===
     drawio:
@@ -20,7 +51,14 @@ http:
         - web
       service: drawio
       tls: {}
+      # DrawIO 也加上这个中间件，防止同样的问题
+      middlewares:
+        - "secure-headers"
+        - "my-auth"
 
+  # ==========================================
+  # 3. 服务配置 (Services) - 保持不变
+  # ==========================================
   services:
     # HedgeDoc 服务
     hedgedoc:

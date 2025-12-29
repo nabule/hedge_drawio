@@ -1,0 +1,23 @@
+# TLS 动态配置
+# 证书配置说明
+
+tls:
+  certificates:
+    # 证书文件路径（容器内路径 /certs 对应宿主机挂载目录）
+    # 支持 Let's Encrypt (acme.sh) 或 Cloudflare Origin 证书
+    - certFile: /certs/origin.crt
+      keyFile: /certs/origin.key
+
+  # 配置默认证书仓库
+  # 当 Traefik 无法精确匹配某个域名时，会使用这里的证书
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/origin.crt
+        keyFile: /certs/origin.key
+
+  options:
+    default:
+      minVersion: VersionTLS12
+      # 设为 true 强制 SNI 匹配，false 容错性更高
+      sniStrict: false

@@ -176,28 +176,44 @@ docker compose up -d
 
 ##### 部署步骤
 
-1. **准备配置文件**
+> [!IMPORTANT]
+> **安全提醒**: 本项目中所有包含敏感信息的配置文件都不纳入 Git 版本控制。你需要从 `.example` 文件复制并修改为实际配置。
+
+1. **复制配置文件**
 
    ```bash
-   # 复制示例配置
+   # 复制 Docker Compose 配置
    cp docker-compose.yml.example docker-compose.yml
    
-   # 编辑配置，替换占位符
-   # - <YOUR_DOMAIN>: 你的域名，如 md.example.com
-   # - <YOUR_DB_PASSWORD>: 数据库密码
+   # 复制 Traefik 路由配置
+   cp traefik/dynamic/routes.yml.example traefik/dynamic/routes.yml
+   
+   # 复制 TLS 配置
+   cp traefik/dynamic/tls.yml.example traefik/dynamic/tls.yml
    ```
 
-2. **配置 Traefik 路由**
+2. **修改 Docker Compose 配置**
 
-   编辑 `traefik/dynamic/routes.yml`，将 `example.com` 替换为你的实际域名。
+   编辑 `docker-compose.yml`，替换以下占位符：
+   - `<YOUR_DOMAIN>`: 你的域名，如 `md.example.com`
+   - `<YOUR_DB_PASSWORD>`: 数据库密码
 
-3. **配置 TLS 证书**
+3. **修改 Traefik 路由配置**
+
+   编辑 `traefik/dynamic/routes.yml`，替换以下占位符：
+   - `<YOUR_DOMAIN>`: 你的域名
+   - `<YOUR_HASHED_PASSWORD>`: 使用 `htpasswd -nb admin yourpassword` 生成的密码哈希
+
+4. **配置 TLS 证书**
 
    将 TLS 证书放到 `traefik/certs/` 目录：
    - `origin.crt` - 证书文件
    - `origin.key` - 私钥文件
 
-4. **配置内网 hosts 文件**
+   > [!TIP]
+   > 可以使用 Cloudflare Origin 证书、Let's Encrypt 证书或自签名证书。
+
+5. **配置内网 hosts 文件（内网访问）**
 
    在内网客户端的 hosts 文件中添加：
    ```
@@ -205,7 +221,15 @@ docker compose up -d
    <服务器内网IP>  drawio.example.com
    ```
 
-5. **启动服务**
+6. **创建数据目录并设置权限**
+
+   ```bash
+   mkdir -p data/database data/uploads/drawio
+   chmod -R 777 data/uploads  # 开发环境
+   # 或: sudo chown -R 10000:10000 data/uploads  # 生产环境
+   ```
+
+7. **启动服务**
 
    ```bash
    docker compose up -d

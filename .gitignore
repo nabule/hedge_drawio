@@ -19,6 +19,22 @@ yarn-error.log
 # Data
 data/
 *.tar
+
+# 编译日志
+build*.log
+
+# ==========================================
+# 敏感配置文件 - 只跟踪 .example 文件
+# ==========================================
+
+# Docker Compose 配置（包含敏感密码和域名）
 docker-compose.yml
+
+# Traefik 动态配置（包含敏感域名和认证信息）
+traefik/dynamic/routes.yml
+traefik/dynamic/tls.yml
+
+# TLS 证书文件（敏感私钥）
 traefik/certs/*.crt
 traefik/certs/*.key
+!traefik/certs/README.md

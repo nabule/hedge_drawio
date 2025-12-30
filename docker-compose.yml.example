@@ -37,7 +37,7 @@ services:
     image: postgres:13-alpine
     environment:
       POSTGRES_USER: hedgedoc
-      POSTGRES_PASSWORD: <YOUR_DB_PASSWORD>
+      POSTGRES_PASSWORD: hedgedoc_password
       POSTGRES_DB: hedgedoc
     volumes:
       # 数据库数据持久化
@@ -51,12 +51,12 @@ services:
   # ============================================
   hedgedoc:
     # 使用 DockerHub 镜像或本地编译镜像
-    image: nabule/hedge_drawio:latest
+    image: nabule/hedge_drawio:local
     environment:
       # 数据库配置
-      CMD_DB_URL: postgres://hedgedoc:<YOUR_DB_PASSWORD>@database:5432/hedgedoc
+      CMD_DB_URL: postgres://hedgedoc:hedgedoc_password@database:5432/hedgedoc
       # 域名配置 - 修改为你的域名
-      CMD_DOMAIN: '<YOUR_DOMAIN>'
+      CMD_DOMAIN: 'md.12342345.xyz'
       # 端口配置 - 统一使用 3000
       CMD_PORT: '3000'
       # URL 中添加端口（如果使用非标准端口）
@@ -75,9 +75,9 @@ services:
       CMD_REQUIRE_FREEURL_AUTHENTICATION: 'false'
       # DrawIO 配置
       # 可选1：使用自托管 DrawIO（需配置 traefik 路由）
-      # CMD_DRAWIO_URL: 'https://drawio.<YOUR_DOMAIN>:3000'
+      CMD_DRAWIO_URL: 'https://<YOUR_DOMAIN>:3000'
       # 可选2：使用官方 DrawIO 服务（推荐，无需自托管）
-      CMD_DRAWIO_URL: 'https://embed.diagrams.net'
+      #CMD_DRAWIO_URL: 'https://embed.diagrams.net'
       # 导出格式: svg (默认) 或 png
       CMD_DRAWIO_EXPORT_FORMAT: svg
       # 是否保留 DrawIO 编辑器中的主题色

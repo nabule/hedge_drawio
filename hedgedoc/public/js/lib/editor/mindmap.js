@@ -98,6 +98,8 @@ export class MindmapEditor {
         <div class="mindmap-modal-header">
           <span class="mindmap-modal-title">思维导图编辑器</span>
           <div class="mindmap-modal-header-buttons">
+            <button class="mindmap-modal-btn mindmap-modal-copy-json" title="复制 JSON">📋</button>
+            <button class="mindmap-modal-btn mindmap-modal-import-json" title="导入 JSON">📥</button>
             <button class="mindmap-modal-btn mindmap-modal-save" title="保存并关闭">保存</button>
             <button class="mindmap-modal-btn mindmap-modal-maximize" title="最大化">&#x26F6;</button>
             <button class="mindmap-modal-btn mindmap-modal-close" title="关闭">&times;</button>
@@ -127,6 +129,12 @@ export class MindmapEditor {
 
         // 绑定保存事件
         saveBtn.addEventListener('click', () => this.save())
+
+        // 绑定复制/导入 JSON 事件
+        const copyJsonBtn = this.modal.querySelector('.mindmap-modal-copy-json')
+        const importJsonBtn = this.modal.querySelector('.mindmap-modal-import-json')
+        copyJsonBtn.addEventListener('click', () => this.copyJsonToClipboard())
+        importJsonBtn.addEventListener('click', () => this.showImportDialog())
 
         // 绑定最大化事件
         maximizeBtn.addEventListener('click', () => this.toggleMaximize())
@@ -220,6 +228,77 @@ export class MindmapEditor {
             setTimeout(() => {
                 this.mindElixir.toCenter()
             }, 300)
+        }
+    }
+
+    /**
+     * 复制当前思维导图 JSON 到剪贴板
+     */
+    async copyJsonToClipboard() {
+        if (!this.mindElixir) {
+            alert('思维导图编辑器未初始化')
+            return
+        }
+
+        try {
+            // 获取当前数据
+            const data = this.mindElixir.getData()
+            const jsonString = JSON.stringify(data, null, 2)
+
+            await navigator.clipboard.writeText(jsonString)
+
+            // 显示成功提示
+            const btn = this.modal.querySelector('.mindmap-modal-copy-json')
+            const originalText = btn.textContent
+            btn.textContent = '✅'
+            setTimeout(() => {
+                btn.textContent = originalText
+            }, 1500)
+        } catch (e) {
+            console.error('复制到剪贴板失败:', e)
+            // 降级方案：使用旧的 execCommand
+            try {
+                const data = this.mindElixir.getData()
+                const jsonString = JSON.stringify(data, null, 2)
+                const textarea = document.createElement('textarea')
+                textarea.value = jsonString
+                document.body.appendChild(textarea)
+                textarea.select()
+                document.execCommand('copy')
+                document.body.removeChild(textarea)
+                alert('JSON 已复制到剪贴板')
+            } catch (fallbackError) {
+                alert('复制失败: ' + e.message)
+            }
+        }
+    }
+
+    /**
+     * 显示导入 JSON 对话框
+     */
+    showImportDialog() {
+        const json = prompt('请粘贴思维导图 JSON 数据：\n\n（提示：JSON 应包含 nodeData 字段）')
+
+        if (!json || !json.trim()) {
+            return
+        }
+
+        try {
+            const data = JSON.parse(json.trim())
+
+            // 验证基本结构
+            if (!data.nodeData) {
+                alert('无效的思维导图 JSON 格式！\n\nJSON 必须包含 nodeData 字段。')
+                return
+            }
+
+            // 重新加载思维导图
+            this.mindElixir.init(data)
+
+            // 更新当前数据引用
+            this.currentData = data
+        } catch (e) {
+            alert('JSON 解析失败！\n\n错误: ' + e.message)
         }
     }
 

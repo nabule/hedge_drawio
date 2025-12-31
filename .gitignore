@@ -1,7 +1,8 @@
 
 # 编译产物和 Release 包
 *.tar.gz
-release_v*/
+release/
+
 
 # 临时文件
 tmp/

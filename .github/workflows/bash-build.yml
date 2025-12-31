@@ -49,7 +49,7 @@ jobs:
           IMAGE_NAME="nabule/hedge_drawio:${{ github.ref_name }}"
           mkdir -p release_pkg
           docker save $IMAGE_NAME -o release_pkg/hedgedoc.tar
-          cp docker-compose.yml release_pkg/
+          cp docker-compose.yml.example release_pkg/
           cp build.sh release_pkg/deploy.sh
           
           # 创建说明文件

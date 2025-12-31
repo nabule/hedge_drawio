@@ -185,6 +185,9 @@ module.exports = {
   //    3rd appearance: "31-good-morning-my-friend---do-you-have-5-2"
   linkifyHeaderStyle: 'keep-case',
   enableStatsApi: true,
+  mindmap: {
+    exportFormat: 'svg'  // 可选: 'svg' | 'png'
+  },
   drawio: {
     url: undefined,  // DrawIO 编辑器外部访问地址，需用户配置
     port: 8180,      // DrawIO 端口（用于自动构建 URL）

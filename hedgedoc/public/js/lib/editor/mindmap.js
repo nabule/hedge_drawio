@@ -12,7 +12,13 @@ import 'mind-elixir/dist/MindElixir.css'
 /**
  * 思维导图编辑器类
  */
-export class MindmapEditor {
+export 
+// 获取思维导图导出格式配置（默认 svg）
+function getMindmapExportFormat() {
+    return (window.mindmapConfig && window.mindmapConfig.exportFormat) || 'svg'
+}
+
+class MindmapEditor {
     constructor(options = {}) {
         this.options = options
         this.modal = null
@@ -357,13 +363,24 @@ export class MindmapEditor {
      * @returns {Promise<string>} Base64 图片数据
      */
     async exportToImage() {
-        if (!this.mindElixir || !this.mindElixir.exportPng) {
-            throw new Error('Mind Elixir 实例未初始化或不支持导出功能')
+        const format = getMindmapExportFormat()
+        
+        // 根据格式选择导出方法
+        if (format === 'svg') {
+            if (!this.mindElixir || !this.mindElixir.exportSvg) {
+                throw new Error('Mind Elixir 实例未初始化或不支持 SVG 导出功能')
+            }
+        } else {
+            if (!this.mindElixir || !this.mindElixir.exportPng) {
+                throw new Error('Mind Elixir 实例未初始化或不支持 PNG 导出功能')
+            }
         }
 
         try {
-            // 调用原生导出方法
-            const blob = await this.mindElixir.exportPng()
+            // 根据配置调用对应的导出方法
+            const blob = format === 'svg' 
+                ? await this.mindElixir.exportSvg(false)  // false = 保留 foreignObject
+                : await this.mindElixir.exportPng()
 
             if (!blob) {
                 throw new Error('导出过程未返回数据')
@@ -398,7 +415,7 @@ export class MindmapEditor {
         const formData = new FormData()
         formData.append('json', JSON.stringify(jsonData))
         formData.append('image', imageData)
-        formData.append('format', 'png')
+        formData.append('format', getMindmapExportFormat())
 
         // 如果是更新已有图形，传递文件 ID
         if (this.currentFileId) {

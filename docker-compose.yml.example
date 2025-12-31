@@ -82,6 +82,8 @@ services:
       CMD_DRAWIO_EXPORT_FORMAT: svg
       # 是否保留 DrawIO 编辑器中的主题色
       CMD_DRAWIO_KEEP_THEME: 'false'
+      # 思维导图导出格式: svg (默认，矢量清晰) 或 png (光栅兼容)
+      CMD_MINDMAP_EXPORT_FORMAT: svg
     volumes:
       # 上传文件持久化
       - ./data/uploads:/hedgedoc/public/uploads

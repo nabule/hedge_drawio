@@ -163,6 +163,9 @@ module.exports = {
   openID: toBooleanConfig(process.env.CMD_OPENID),
   linkifyHeaderStyle: process.env.CMD_LINKIFY_HEADER_STYLE,
   enableStatsApi: toBooleanConfig(process.env.CMD_ENABLE_STATS_API),
+  mindmap: {
+    exportFormat: process.env.CMD_MINDMAP_EXPORT_FORMAT
+  },
   drawio: {
     url: process.env.CMD_DRAWIO_URL,
     port: toIntegerConfig(process.env.CMD_DRAWIO_PORT),

@@ -78,6 +78,7 @@ exports.showNote = function (req, res, next) {
     return res.render('hedgedoc.ejs', {
       title,
       opengraph,
+      mindmapConfig: config.mindmap,
       drawioConfig: config.drawio,
       cspNonce: res.locals.nonce
     })

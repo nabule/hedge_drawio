@@ -1,3 +1,8 @@
+<% if (typeof mindmapConfig !== 'undefined') { %>
+    <script<% if (typeof cspNonce !== 'undefined' && cspNonce) { %> nonce="<%- cspNonce %>"<% } %>>
+        window.mindmapConfig = <%- JSON.stringify(mindmapConfig) %>;
+    </script>
+<% } %>
 <% if (typeof drawioConfig !== 'undefined') { %>
     <script<% if (typeof cspNonce !== 'undefined' && cspNonce) { %> nonce="<%- cspNonce %>"<% } %>>
         window.drawioConfig = <%- JSON.stringify(drawioConfig) %>;

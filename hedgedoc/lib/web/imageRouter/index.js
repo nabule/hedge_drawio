@@ -12,8 +12,10 @@ const isSvg = require('is-svg')
 const config = require('../../config')
 const logger = require('../../logger')
 const errors = require('../../errors')
+const zipImport = require('../note/zip-import')
 
 const imageRouter = (module.exports = Router())
+
 
 async function checkUploadType(filePath) {
   const extension = path.extname(filePath).toLowerCase()
@@ -490,3 +492,70 @@ imageRouter.get('/mindmap/:fileId', function (req, res) {
   }
 })
 
+// ========== ZIP 导入 API ==========
+
+// 导入 ZIP 包创建新笔记
+imageRouter.post('/import-zip', function (req, res) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hedgedoc-zip-upload-'))
+  const form = formidable({
+    keepExtensions: true,
+    uploadDir: tmpDir,
+    maxFileSize: 50 * 1024 * 1024, // 50MB 限制
+    filter: function ({ mimetype }) {
+      // 只接受 ZIP 文件
+      return mimetype === 'application/zip' || mimetype === 'application/x-zip-compressed'
+    }
+  })
+
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      logger.error(`ZIP import error: formidable error: ${err}`)
+      rimraf.sync(tmpDir)
+      return res.status(400).json({
+        success: false,
+        message: '文件上传失败: ' + err.message
+      })
+    }
+
+    // 获取上传的文件
+    const uploadedFile = files.file
+    if (!uploadedFile || !uploadedFile.filepath) {
+      logger.error('ZIP import error: No file uploaded')
+      rimraf.sync(tmpDir)
+      return res.status(400).json({
+        success: false,
+        message: '请选择 ZIP 文件'
+      })
+    }
+
+    try {
+      // 读取 ZIP 文件
+      const zipBuffer = fs.readFileSync(uploadedFile.filepath)
+
+      // 处理导入
+      const result = await zipImport.processZipImport(zipBuffer)
+
+      // 清理临时目录
+      rimraf.sync(tmpDir)
+
+      if (result.success) {
+        res.json({
+          success: true,
+          noteUrl: result.noteUrl
+        })
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message || '导入失败'
+        })
+      }
+    } catch (e) {
+      logger.error(`ZIP import error: ${e.message}`)
+      rimraf.sync(tmpDir)
+      res.status(500).json({
+        success: false,
+        message: '导入处理失败: ' + e.message
+      })
+    }
+  })
+})

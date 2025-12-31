@@ -29,7 +29,8 @@ export const getUIElements = () => ({
       dropbox: $('.ui-import-dropbox'),
       gist: $('.ui-import-gist'),
       snippet: $('.ui-import-snippet'),
-      clipboard: $('.ui-import-clipboard')
+      clipboard: $('.ui-import-clipboard'),
+      zip: $('.ui-import-zip')
     },
     mode: $('.ui-mode'),
     edit: $('.ui-edit'),

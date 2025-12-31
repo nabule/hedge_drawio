@@ -66,7 +66,7 @@ setloginStateChangeEvent(pageInit)
 
 pageInit()
 
-function pageInit () {
+function pageInit() {
   checkIfAuth(
     data => {
       $('.ui-signin').hide()
@@ -115,7 +115,7 @@ $('.ui-history').click(() => {
   }
 })
 
-function checkHistoryList () {
+function checkHistoryList() {
   if ($('#history-list').children().length > 0) {
     $('.pagination').show()
     $('.ui-nohistory').hide()
@@ -131,11 +131,11 @@ function checkHistoryList () {
   }
 }
 
-function parseHistoryCallback (list, notehistory) {
+function parseHistoryCallback(list, notehistory) {
   checkHistoryList()
   // sort by pinned then timestamp
   list.sort('', {
-    sortFunction (a, b) {
+    sortFunction(a, b) {
       const notea = a.values()
       const noteb = b.values()
       if (notea.pinned && !noteb.pinned) {
@@ -205,7 +205,7 @@ historyList.on('updated', e => {
   $('.ui-history-pin').on('click', historyPinClick)
 })
 
-function historyCloseClick (e) {
+function historyCloseClick(e) {
   e.preventDefault()
   const id = $(this).closest('a').siblings('span').html()
   const value = historyList.get('id', id)[0]._values
@@ -215,7 +215,7 @@ function historyCloseClick (e) {
   deleteId = id
 }
 
-function historyPinClick (e) {
+function historyPinClick(e) {
   e.preventDefault()
   const $this = $(this)
   const id = $this.closest('a').siblings('span').html()
@@ -254,7 +254,7 @@ function historyPinClick (e) {
 // auto update item fromNow every minutes
 setInterval(updateItemFromNow, 60000)
 
-function updateItemFromNow () {
+function updateItemFromNow() {
   const items = $('.item').toArray()
   for (let i = 0; i < items.length; i++) {
     const item = $(items[i])
@@ -266,7 +266,7 @@ function updateItemFromNow () {
 let clearHistory = false
 let deleteId = null
 
-function deleteHistory () {
+function deleteHistory() {
   checkIfAuth(() => {
     deleteServerHistory(deleteId, (err, result) => {
       if (!err) {
@@ -385,7 +385,7 @@ let filtertags = []
 $('.ui-use-tags').select2({
   placeholder: $('.ui-use-tags').attr('placeholder'),
   multiple: true,
-  data () {
+  data() {
     return {
       results: filtertags
     }
@@ -394,7 +394,7 @@ $('.ui-use-tags').select2({
 $('.select2-input').css('width', 'inherit')
 buildTagsFilter([])
 
-function buildTagsFilter (tags) {
+function buildTagsFilter(tags) {
   for (let i = 0; i < tags.length; i++) {
     tags[i] = {
       id: i,
@@ -442,4 +442,63 @@ $('.signin-modal').on('shown.bs.modal', function () {
   } else if (fieldOpenID.length === 1) {
     fieldOpenID.focus()
   }
+})
+
+// ZIP 导入功能
+$('.ui-import-zip').click(function (e) {
+  e.preventDefault()
+  e.stopPropagation()
+
+  // 创建隐藏的 file input
+  const fileInput = $('<input type="file" accept=".zip" style="display: none;">')
+  fileInput.appendTo('body')
+
+  fileInput.on('change', function (event) {
+    const file = event.target.files[0]
+    if (!file) {
+      fileInput.remove()
+      return
+    }
+
+    // 检查文件类型
+    if (!file.name.endsWith('.zip')) {
+      alert('请选择 ZIP 文件')
+      fileInput.remove()
+      return
+    }
+
+    // 显示加载状态
+    $('.ui-import-zip').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> 导入中...')
+
+    // 构建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 上传到服务器
+    fetch('/import-zip', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        fileInput.remove()
+        $('.ui-import-zip').prop('disabled', false).html('<i class="fa fa-file-archive-o"></i> 导入 ZIP')
+
+        if (data.success) {
+          // 跳转到新笔记
+          window.location.href = data.noteUrl
+        } else {
+          alert('导入失败: ' + (data.message || '未知错误'))
+        }
+      })
+      .catch(err => {
+        fileInput.remove()
+        $('.ui-import-zip').prop('disabled', false).html('<i class="fa fa-file-archive-o"></i> 导入 ZIP')
+        console.error('ZIP import error:', err)
+        alert('导入失败: ' + err.message)
+      })
+  })
+
+  // 触发文件选择
+  fileInput.click()
 })

@@ -1389,6 +1389,63 @@ ui.toolbar.import.snippet.click(function () {
       ui.spinner.hide()
     })
 })
+// import from zip
+ui.toolbar.import.zip.click(function (e) {
+  e.preventDefault()
+  e.stopPropagation()
+  // 创建隐藏的 file input
+  const fileInput = $('<input type="file" accept=".zip" style="display: none;">')
+  fileInput.appendTo('body')
+
+  fileInput.on('change', function (event) {
+    const file = event.target.files[0]
+    if (!file) {
+      fileInput.remove()
+      return
+    }
+
+    // 检查文件类型
+    if (!file.name.endsWith('.zip')) {
+      alert('请选择 ZIP 文件')
+      fileInput.remove()
+      return
+    }
+
+    // 显示加载状态
+    ui.spinner.show()
+
+    // 构建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 上传到服务器
+    fetch('/import-zip', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        ui.spinner.hide()
+        fileInput.remove()
+
+        if (data.success) {
+          // 跳转到新笔记
+          window.location.href = data.noteUrl
+        } else {
+          alert('导入失败: ' + (data.message || '未知错误'))
+        }
+      })
+      .catch(err => {
+        ui.spinner.hide()
+        fileInput.remove()
+        console.error('ZIP import error:', err)
+        alert('导入失败: ' + err.message)
+      })
+  })
+
+  // 触发文件选择
+  fileInput.click()
+})
 // toc
 ui.toc.dropdown.click(function (e) {
   e.stopPropagation()

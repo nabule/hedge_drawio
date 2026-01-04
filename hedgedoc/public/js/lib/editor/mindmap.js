@@ -12,9 +12,9 @@ import 'mind-elixir/dist/MindElixir.css'
 /**
  * 思维导图编辑器类
  */
-export 
-// 获取思维导图导出格式配置（默认 svg）
-function getMindmapExportFormat() {
+export
+    // 获取思维导图导出格式配置（默认 svg）
+    function getMindmapExportFormat() {
     return (window.mindmapConfig && window.mindmapConfig.exportFormat) || 'svg'
 }
 
@@ -364,7 +364,7 @@ class MindmapEditor {
      */
     async exportToImage() {
         const format = getMindmapExportFormat()
-        
+
         // 根据格式选择导出方法
         if (format === 'svg') {
             if (!this.mindElixir || !this.mindElixir.exportSvg) {
@@ -378,12 +378,17 @@ class MindmapEditor {
 
         try {
             // 根据配置调用对应的导出方法
-            const blob = format === 'svg' 
+            let blob = format === 'svg'
                 ? await this.mindElixir.exportSvg(false)  // false = 保留 foreignObject
                 : await this.mindElixir.exportPng()
 
             if (!blob) {
                 throw new Error('导出过程未返回数据')
+            }
+
+            // SVG 格式需要修复缺失的 summary 文字
+            if (format === 'svg') {
+                blob = await this.fixSummaryLabels(blob)
             }
 
             // 转换为 Base64
@@ -396,6 +401,133 @@ class MindmapEditor {
         } catch (e) {
             console.error('导出图片错误:', e)
             throw new Error('图片导出失败: ' + e.message)
+        }
+    }
+
+    /**
+     * 修复 SVG 中缺失的 summary 标签文字 (v3 改进版)
+     * 
+     * v3改进：
+     * 1. 修正正则表达式以支持负数坐标（d属性中包含 h -10 等情况）
+     * 2. 将文字元素添加到容器 SVG 的最末尾，确保 Z-index 最高，解决文字被节点背景遮挡的问题
+     * 3. 根据连接线长度正负值自动调整文字锚点 (text-anchor)
+     * 
+     * @param {Blob} svgBlob - 原始 SVG Blob
+     * @returns {Promise<Blob>} 修复后的 SVG Blob
+     */
+    async fixSummaryLabels(svgBlob) {
+        try {
+            const mindData = this.mindElixir.getData()
+            const summaries = Array.isArray(mindData.summaries) ? mindData.summaries : []
+
+            if (summaries.length === 0) {
+                return svgBlob
+            }
+
+            const svgText = await svgBlob.text()
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(svgText, 'image/svg+xml')
+
+            const parseError = doc.querySelector('parsererror')
+            if (parseError) {
+                console.error('[Mindmap] SVG Parse Error:', parseError.textContent)
+                return svgBlob
+            }
+
+            summaries.forEach(summary => {
+                if (!summary.label) return
+
+                const summaryIds = [`s-${summary.id}`, summary.id]
+                let gElement = null
+
+                for (const id of summaryIds) {
+                    gElement = doc.getElementById(id)
+                    if (gElement) break
+                }
+
+                if (!gElement) {
+                    gElement = doc.querySelector(`g[id$="${summary.id}"]`)
+                }
+
+                if (!gElement) {
+                    // 元素未找到，可能是DOM ID不匹配，跳过
+                    return
+                }
+
+                const pathElement = gElement.querySelector('path')
+                if (!pathElement) {
+                    return
+                }
+
+                // 解析 path 的 d 属性，支持负数
+                // 常见的 summary path: "M x y ... h len" (len 可负)
+                const d = pathElement.getAttribute('d') || ''
+                const lastMMatch = d.match(/M\s+([-\d.]+)\s+([-\d.]+)\s+h\s+([-\d.]+)\s*$/)
+
+                let textX, textY, anchor = 'start'
+                if (lastMMatch) {
+                    const startX = parseFloat(lastMMatch[1])
+                    const startY = parseFloat(lastMMatch[2])
+                    const hLen = parseFloat(lastMMatch[3])
+
+                    // 文字放在水平线结束位置附近
+                    if (hLen >= 0) {
+                        textX = startX + hLen + 5
+                        anchor = 'start'
+                    } else {
+                        textX = startX + hLen - 5
+                        anchor = 'end'
+                    }
+                    textY = startY + 4 // 微调垂直对齐
+                } else {
+                    // 降级策略（支持负数）
+                    const mMatch = d.match(/M\s+([-\d.]+)\s+([-\d.]+)/)
+                    if (mMatch) {
+                        textX = parseFloat(mMatch[1]) + 30
+                        textY = parseFloat(mMatch[2]) + 4
+                    } else {
+                        return
+                    }
+                }
+
+                const text = doc.createElementNS('http://www.w3.org/2000/svg', 'text')
+                text.textContent = summary.label
+                text.setAttribute('x', textX)
+                text.setAttribute('y', textY)
+                text.setAttribute('font-size', '14')
+                text.setAttribute('font-family', 'sans-serif')
+                text.setAttribute('fill', '#555555')
+                text.setAttribute('dominant-baseline', 'middle')
+                text.setAttribute('text-anchor', anchor)
+
+                // 关键修复：将文字附加到 SVG 容器末尾，确保显示在顶层（解决由于节点背景造成的遮挡）
+                // 查找 gElement 的父级 SVG 容器 (通常是 svg.summary 的父级)
+                let targetContainer = null
+
+                // 正常结构：gElement -> svg.summary -> svg(container)
+                const summarySvg = gElement.ownerSVGElement
+                if (summarySvg && summarySvg.parentNode && summarySvg.parentNode.tagName === 'svg') {
+                    targetContainer = summarySvg.parentNode
+                } else if (summarySvg) {
+                    targetContainer = summarySvg
+                } else {
+                    targetContainer = gElement
+                }
+
+                if (targetContainer) {
+                    targetContainer.appendChild(text)
+                } else {
+                    gElement.appendChild(text)
+                }
+            })
+
+            const serializer = new XMLSerializer()
+            const fixedSvgText = serializer.serializeToString(doc)
+
+            return new Blob([fixedSvgText], { type: 'image/svg+xml' })
+        } catch (e) {
+            console.error('[Mindmap] fixSummaryLabels failed:', e)
+            return svgBlob
         }
     }
 

@@ -386,9 +386,10 @@ class MindmapEditor {
                 throw new Error('导出过程未返回数据')
             }
 
-            // SVG 格式需要修复缺失的 summary 文字
+            // SVG 格式需要修复缺失的文字（summary 和 arrows）
             if (format === 'svg') {
                 blob = await this.fixSummaryLabels(blob)
+                blob = await this.fixArrowLabels(blob)
             }
 
             // 转换为 Base64
@@ -527,6 +528,136 @@ class MindmapEditor {
             return new Blob([fixedSvgText], { type: 'image/svg+xml' })
         } catch (e) {
             console.error('[Mindmap] fixSummaryLabels failed:', e)
+            return svgBlob
+        }
+    }
+
+    /**
+     * 修复 SVG 中缺失的 arrow（连接线）标签文字
+     * 
+     * Mind Elixir 的 exportSvg() 不会导出 arrows 的 label 文本，
+     * 本方法通过解析 SVG DOM，为每个有 label 的 arrow 添加文本元素。
+     * 
+     * @param {Blob} svgBlob - 原始 SVG Blob
+     * @returns {Promise<Blob>} 修复后的 SVG Blob
+     */
+    async fixArrowLabels(svgBlob) {
+        try {
+            const mindData = this.mindElixir.getData()
+            const arrows = Array.isArray(mindData.arrows) ? mindData.arrows : []
+
+            if (arrows.length === 0) {
+                return svgBlob
+            }
+
+            const svgText = await svgBlob.text()
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(svgText, 'image/svg+xml')
+
+            const parseError = doc.querySelector('parsererror')
+            if (parseError) {
+                console.error('[Mindmap] SVG Parse Error:', parseError.textContent)
+                return svgBlob
+            }
+
+            arrows.forEach(arrow => {
+                if (!arrow.label) return
+
+                // 尝试多种方式定位 arrow 的 g 元素
+                const arrowIds = [`arrow-${arrow.id}`, arrow.id]
+                let gElement = null
+
+                for (const id of arrowIds) {
+                    gElement = doc.getElementById(id)
+                    if (gElement) break
+                }
+
+                // 尝试通过 data-linkid 属性查找
+                if (!gElement) {
+                    gElement = doc.querySelector(`g[data-linkid="${arrow.id}"]`)
+                }
+
+                if (!gElement) {
+                    // 元素未找到，跳过
+                    return
+                }
+
+                // 查找连接线的 path 元素（第一个非箭头的 path）
+                const pathElements = gElement.querySelectorAll('path')
+                if (pathElements.length === 0) return
+
+                // 通常第一个 path 是连接线主体（贝塞尔曲线）
+                const mainPath = pathElements[0]
+                const d = mainPath.getAttribute('d') || ''
+
+                // 解析贝塞尔曲线：M startX startY C ctrl1X ctrl1Y ctrl2X ctrl2Y endX endY
+                // 或者简单曲线：M startX startY Q ctrlX ctrlY endX endY
+                let textX, textY
+
+                // 尝试解析三次贝塞尔曲线 (C 命令)
+                const cubicMatch = d.match(/M\s*([-\d.]+)[,\s]+([-\d.]+)\s*C\s*([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)/)
+                if (cubicMatch) {
+                    const startX = parseFloat(cubicMatch[1])
+                    const startY = parseFloat(cubicMatch[2])
+                    const endX = parseFloat(cubicMatch[7])
+                    const endY = parseFloat(cubicMatch[8])
+                    // 取起点和终点的中点
+                    textX = (startX + endX) / 2
+                    textY = (startY + endY) / 2
+                } else {
+                    // 尝试解析二次贝塞尔曲线 (Q 命令)
+                    const quadMatch = d.match(/M\s*([-\d.]+)[,\s]+([-\d.]+)\s*Q\s*([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)/)
+                    if (quadMatch) {
+                        const startX = parseFloat(quadMatch[1])
+                        const startY = parseFloat(quadMatch[2])
+                        const endX = parseFloat(quadMatch[5])
+                        const endY = parseFloat(quadMatch[6])
+                        textX = (startX + endX) / 2
+                        textY = (startY + endY) / 2
+                    } else {
+                        // 降级策略：只取起点坐标
+                        const mMatch = d.match(/M\s*([-\d.]+)[,\s]+([-\d.]+)/)
+                        if (mMatch) {
+                            textX = parseFloat(mMatch[1]) + 50
+                            textY = parseFloat(mMatch[2])
+                        } else {
+                            return
+                        }
+                    }
+                }
+
+                // 创建文本元素
+                const text = doc.createElementNS('http://www.w3.org/2000/svg', 'text')
+                text.textContent = arrow.label
+                text.setAttribute('x', textX)
+                text.setAttribute('y', textY - 5) // 稍微向上偏移，避免与线重叠
+                text.setAttribute('font-size', '12')
+                text.setAttribute('font-family', 'sans-serif')
+                text.setAttribute('fill', '#e64553') // 使用 accent-color
+                text.setAttribute('text-anchor', 'middle')
+                text.setAttribute('dominant-baseline', 'auto')
+
+                // 添加白色背景以提高可读性
+                const bgRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect')
+                const textLength = arrow.label.length * 7 // 估算文本宽度
+                bgRect.setAttribute('x', textX - textLength / 2 - 2)
+                bgRect.setAttribute('y', textY - 16)
+                bgRect.setAttribute('width', textLength + 4)
+                bgRect.setAttribute('height', 14)
+                bgRect.setAttribute('fill', 'rgba(255, 255, 255, 0.85)')
+                bgRect.setAttribute('rx', '2')
+
+                // 将背景和文本添加到 g 元素中
+                gElement.appendChild(bgRect)
+                gElement.appendChild(text)
+            })
+
+            const serializer = new XMLSerializer()
+            const fixedSvgText = serializer.serializeToString(doc)
+
+            return new Blob([fixedSvgText], { type: 'image/svg+xml' })
+        } catch (e) {
+            console.error('[Mindmap] fixArrowLabels failed:', e)
             return svgBlob
         }
     }

@@ -342,6 +342,7 @@ docker compose down -v
 3. 点击工具栏中的 **DrawIO 图标**（📊）
 4. 在弹出的 DrawIO 编辑器中绘制图形
 5. 点击**保存并退出**，图形将自动插入到文档中
+6. 如果点击关闭按钮或弹窗空白区域，系统会提示选择**保存并关闭**、**不保存关闭**或**取消**；保存失败时编辑器会保持打开
 
 ### 4.2 编辑已有图形
 
@@ -349,6 +350,7 @@ docker compose down -v
 2. 在**预览区域**中点击 DrawIO 图形
 3. DrawIO 编辑器将自动打开并加载图形
 4. 修改后保存，文档中的图形将自动更新
+5. 如果通过关闭按钮、DrawIO 退出按钮或弹窗空白区域关闭，系统会先提示保存，避免未保存修改丢失
 
 ### 4.3 插入和编辑思维导图
 
@@ -442,6 +444,8 @@ ZIP 包内容：
 - **主要功能**：
   - `DrawioEditor.open()` - 打开编辑器（新建或编辑已有图形）
   - `DrawioEditor.handleMessage()` - 处理 DrawIO 返回的消息
+  - `DrawioEditor.requestClose()` - 关闭前提示保存，并提供保存关闭、不保存关闭和取消三种选择
+  - `DrawioEditor.save()` - 请求 DrawIO 导出当前图形，并上传 XML 和渲染图片
   - `DrawioEditor.uploadToServer()` - 上传 XML 和图片到服务器
 
 #### 思维导图编辑器集成 (`hedgedoc/public/js/lib/editor/mindmap.js`)
@@ -525,6 +529,28 @@ sequenceDiagram
     D-->>H: 返回更新后的 XML 和图片
     H->>S: 更新 XML 和图片文件
     H->>U: 刷新预览显示
+```
+
+#### DrawIO 关闭前保存提醒流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant H as HedgeDoc
+    participant D as DrawIO
+    participant S as 服务器
+
+    U->>H: 打开 DrawIO 编辑器
+    H->>D: 加载或创建图形
+    U->>D: 编辑图形
+    U->>H: 点击关闭按钮、DrawIO 退出按钮或弹窗空白区域
+    H->>U: 提示保存并关闭、不保存关闭或取消
+    U->>H: 选择保存并关闭
+    H->>D: 请求导出当前 XML 和图片
+    D-->>H: 返回 XML 和图片数据
+    H->>S: 上传 XML 和图片
+    S-->>H: 返回文件路径
+    H->>U: 保存成功后关闭编辑器
 ```
 
 #### 思维导图关闭前保存提醒流程

@@ -23,6 +23,16 @@ export class DrawioEditor {
         this.onSaveCallback = null
         this.messageHandler = this.handleMessage.bind(this)
         this.isMaximized = false
+        this.isSaving = false
+        this.editorReady = false
+        this.hasPotentialUnsavedChanges = false
+        this.initialXmlSnapshot = null
+        this.pendingClosePrompt = null
+        this.resolveClosePrompt = null
+        this.pendingExportFormat = null
+        this.pendingSaveTimer = null
+        this.hasSaveXmlForCurrentSave = false
+        this.requireExportXmlForCurrentSave = false
     }
 
     /**
@@ -76,6 +86,10 @@ export class DrawioEditor {
 
         // 保存 XML 数据用于加载
         this.pendingXml = xml
+        this.currentXml = xml || ''
+        this.editorReady = false
+        this.hasPotentialUnsavedChanges = false
+        this.initialXmlSnapshot = this.getXmlSnapshot(this.currentXml)
 
         // 构建 DrawIO URL
         // 使用 ui=atlas 和 dark=0 强制浅色主题
@@ -136,6 +150,17 @@ export class DrawioEditor {
           </div>
           <iframe class="drawio-iframe" frameborder="0"></iframe>
         </div>
+        <div class="drawio-close-confirm" role="dialog" aria-modal="true" aria-labelledby="drawio-close-confirm-title" hidden>
+          <div class="drawio-close-confirm-dialog">
+            <h3 id="drawio-close-confirm-title">保存 DrawIO 修改？</h3>
+            <p>当前图形有未保存的修改，请选择关闭方式。</p>
+            <div class="drawio-close-confirm-actions">
+              <button class="drawio-close-confirm-save" type="button">保存并关闭</button>
+              <button class="drawio-close-confirm-discard" type="button">不保存关闭</button>
+              <button class="drawio-close-confirm-cancel" type="button">取消</button>
+            </div>
+          </div>
+        </div>
       </div>
     `
 
@@ -145,10 +170,26 @@ export class DrawioEditor {
         const maximizeBtn = this.modal.querySelector('.drawio-modal-maximize')
         const backdrop = this.modal.querySelector('.drawio-modal-backdrop')
         const header = this.modal.querySelector('.drawio-modal-header')
+        const closeConfirm = this.modal.querySelector('.drawio-close-confirm')
+        const closeConfirmSave = this.modal.querySelector('.drawio-close-confirm-save')
+        const closeConfirmDiscard = this.modal.querySelector('.drawio-close-confirm-discard')
+        const closeConfirmCancel = this.modal.querySelector('.drawio-close-confirm-cancel')
 
         // 绑定关闭事件
-        closeBtn.addEventListener('click', () => this.close())
-        backdrop.addEventListener('click', () => this.close())
+        closeBtn.addEventListener('click', () => this.requestClose())
+        backdrop.addEventListener('click', () => this.requestClose())
+        closeConfirm.addEventListener('click', (e) => {
+            if (e.target === closeConfirm && this.resolveClosePrompt) this.resolveClosePrompt('cancel')
+        })
+        closeConfirmSave.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('save')
+        })
+        closeConfirmDiscard.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('discard')
+        })
+        closeConfirmCancel.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('cancel')
+        })
 
         // 绑定最大化事件
         maximizeBtn.addEventListener('click', () => this.toggleMaximize())
@@ -244,7 +285,8 @@ export class DrawioEditor {
 
         // 更新当前 XML 并加载到编辑器
         this.currentXml = trimmedXml
-        this.postMessage({ action: 'load', xml: trimmedXml })
+        this.hasPotentialUnsavedChanges = true
+        this.postMessage({ action: 'load', autosave: 1, modified: true, xml: trimmedXml })
     }
 
     /**
@@ -272,7 +314,12 @@ export class DrawioEditor {
 
                 case 'exit':
                     // 用户退出编辑器
-                    this.close()
+                    this.requestClose(!!msg.modified)
+                    break
+
+                case 'autosave':
+                    // DrawIO 内容已变化，记录最新 XML 用于关闭保护
+                    this.onAutosave(msg)
                     break
 
                 case 'export':
@@ -297,11 +344,14 @@ export class DrawioEditor {
 
         // 显示 iframe
         this.iframe.style.display = 'block'
+        this.editorReady = true
+        this.hasPotentialUnsavedChanges = true
 
         // 加载已有的 XML 数据
         const loadMsg = {
             action: 'load',
-            autosave: 0,
+            autosave: 1,
+            modified: false,
             xml: this.pendingXml || ''
         }
 
@@ -309,22 +359,123 @@ export class DrawioEditor {
     }
 
     /**
-     * 处理保存事件
+     * 请求关闭编辑器。存在未保存修改时提示先保存。
+     * @param {boolean} forcePrompt - DrawIO 明确报告有未保存修改时强制提示
      */
-    onSave(msg) {
-        // 保存 XML 数据
-        this.currentXml = msg.xml
+    async requestClose(forcePrompt = false) {
+        if (this.isSaving || this.pendingClosePrompt) return
 
-        // 获取动态配置，如果没有则使用默认值
-        const exportFormat = (window.drawioConfig && window.drawioConfig.exportFormat) || 'svg'
-        const keepTheme = (window.drawioConfig && typeof window.drawioConfig.keepTheme !== 'undefined') ? window.drawioConfig.keepTheme : false
+        if (!forcePrompt && !this.hasUnsavedChanges()) {
+            this.close()
+            return
+        }
 
-        // 请求导出配置的格式
+        const action = await this.showCloseConfirm()
+
+        if (action === 'save') {
+            this.save()
+        } else if (action === 'discard') {
+            this.close()
+        }
+    }
+
+    /**
+     * 判断当前图形是否存在未保存修改
+     * @returns {boolean}
+     */
+    hasUnsavedChanges() {
+        return this.editorReady || this.hasPotentialUnsavedChanges || this.initialXmlSnapshot !== this.getXmlSnapshot(this.currentXml)
+    }
+
+    /**
+     * 获取用于比较的 XML 快照
+     * @param {string|null|undefined} xml - DrawIO XML 数据
+     * @returns {string}
+     */
+    getXmlSnapshot(xml) {
+        return typeof xml === 'string' ? xml : ''
+    }
+
+    /**
+     * 显示关闭确认层
+     * @returns {Promise<string>} save/discard/cancel
+     */
+    showCloseConfirm() {
+        const closeConfirm = this.modal.querySelector('.drawio-close-confirm')
+        const saveButton = this.modal.querySelector('.drawio-close-confirm-save')
+
+        closeConfirm.hidden = false
+        saveButton.focus()
+
+        this.pendingClosePrompt = new Promise(resolve => {
+            this.resolveClosePrompt = (action) => {
+                closeConfirm.hidden = true
+                this.pendingClosePrompt = null
+                this.resolveClosePrompt = null
+                resolve(action)
+            }
+        })
+
+        return this.pendingClosePrompt
+    }
+
+    /**
+     * 处理 DrawIO 自动保存事件，记录最新 XML 但不上传服务器
+     */
+    onAutosave(msg) {
+        if (typeof msg.xml === 'string') {
+            this.currentXml = msg.xml
+            this.hasPotentialUnsavedChanges = this.initialXmlSnapshot !== this.getXmlSnapshot(msg.xml)
+        } else {
+            this.hasPotentialUnsavedChanges = true
+        }
+    }
+
+    /**
+     * 获取 DrawIO 导出配置
+     * @returns {Object}
+     */
+    getExportOptions() {
+        return {
+            format: (window.drawioConfig && window.drawioConfig.exportFormat) || 'svg',
+            keepTheme: (window.drawioConfig && typeof window.drawioConfig.keepTheme !== 'undefined') ? window.drawioConfig.keepTheme : false
+        }
+    }
+
+    /**
+     * 保存 DrawIO 图形
+     */
+    save() {
+        if (this.isSaving) return
+        this.isSaving = true
+        this.setSavingState(true)
+        this.hasSaveXmlForCurrentSave = false
+        this.requireExportXmlForCurrentSave = true
+
+        this.postMessage({ action: 'save' })
+
+        this.pendingSaveTimer = setTimeout(() => {
+            this.pendingSaveTimer = null
+            if (this.isSaving && !this.hasSaveXmlForCurrentSave) {
+                this.requestExport(true)
+            }
+        }, 3000)
+    }
+
+    /**
+     * 请求 DrawIO 导出当前图形
+     * @param {boolean} requireExportXml - 是否要求导出事件必须携带 XML
+     */
+    requestExport(requireExportXml = false) {
+        const exportOptions = this.getExportOptions()
+        this.pendingExportFormat = exportOptions.format
+        this.requireExportXmlForCurrentSave = requireExportXml
+
         this.postMessage({
             action: 'export',
-            format: exportFormat,   // 动态格式: svg 或 png
-            keepTheme: keepTheme,   // 动态主题模式: false=强制浅色, true=原有主题
-            background: exportFormat === 'svg' ? '#ffffff' : undefined, // SVG 强制背景
+            format: exportOptions.format,   // 动态格式: svg 或 png
+            keepTheme: exportOptions.keepTheme,   // 动态主题模式: false=强制浅色, true=原有主题
+            background: exportOptions.format === 'svg' ? '#ffffff' : undefined, // SVG 强制背景
             shadow: true,           // 阴影
             embedImages: true,      // 嵌入图片
             scale: 1,
@@ -334,19 +485,57 @@ export class DrawioEditor {
     }
 
     /**
+     * 处理保存事件
+     */
+    onSave(msg) {
+        // 保存 XML 数据
+        if (typeof msg.xml === 'string') {
+            this.currentXml = msg.xml
+            this.hasSaveXmlForCurrentSave = true
+        }
+
+        if (this.pendingSaveTimer) {
+            clearTimeout(this.pendingSaveTimer)
+            this.pendingSaveTimer = null
+        }
+
+        if (!this.isSaving) {
+            this.isSaving = true
+            this.setSavingState(true)
+        }
+
+        this.requestExport(false)
+    }
+
+    /**
      * 处理导出结果
      */
     async onExport(msg) {
         if (!msg.data) {
             console.error('导出数据为空')
+            alert('保存失败，请重试')
+            this.finishSave()
             return
         }
 
         try {
+            const hasExportXml = typeof msg.xml === 'string'
+            const xml = hasExportXml ? msg.xml : this.currentXml
+            if (this.requireExportXmlForCurrentSave && !hasExportXml && !this.hasSaveXmlForCurrentSave) {
+                throw new Error('未能获取最新 DrawIO XML 数据，请在 DrawIO 内点击保存后重试')
+            }
+            if (!xml) {
+                throw new Error('未能获取 DrawIO XML 数据')
+            }
+
             // 上传到服务器
-            const result = await this.uploadToServer(this.currentXml, msg.data)
+            const result = await this.uploadToServer(xml, msg.data, this.pendingExportFormat || msg.format || 'svg')
 
             if (result && result.imageUrl) {
+                this.currentXml = xml
+                this.initialXmlSnapshot = this.getXmlSnapshot(xml)
+                this.hasPotentialUnsavedChanges = false
+
                 // 调用保存回调
                 if (this.onSaveCallback) {
                     this.onSaveCallback({
@@ -356,14 +545,47 @@ export class DrawioEditor {
                 }
 
                 // 关闭编辑器
+                this.finishSave()
                 this.close()
             } else {
                 console.error('上传失败')
                 alert('保存失败，请重试')
+                this.finishSave()
             }
         } catch (e) {
             console.error('上传错误:', e)
             alert('保存失败: ' + e.message)
+            this.finishSave()
+        }
+    }
+
+    /**
+     * 结束保存流程
+     */
+    finishSave() {
+        if (this.pendingSaveTimer) {
+            clearTimeout(this.pendingSaveTimer)
+            this.pendingSaveTimer = null
+        }
+
+        this.isSaving = false
+        this.setSavingState(false)
+        this.pendingExportFormat = null
+        this.hasSaveXmlForCurrentSave = false
+        this.requireExportXmlForCurrentSave = false
+    }
+
+    /**
+     * 设置保存中的按钮状态
+     * @param {boolean} isSaving - 是否正在保存
+     */
+    setSavingState(isSaving) {
+        if (!this.modal) return
+
+        const saveButton = this.modal.querySelector('.drawio-close-confirm-save')
+        if (saveButton) {
+            saveButton.disabled = isSaving
+            saveButton.textContent = isSaving ? '保存中...' : '保存并关闭'
         }
     }
 
@@ -372,11 +594,11 @@ export class DrawioEditor {
      * @param {string} xml - DrawIO XML 数据
      * @param {string} imageData - 图片 Base64 数据
      */
-    async uploadToServer(xml, imageData) {
+    async uploadToServer(xml, imageData, format) {
         const formData = new FormData()
         formData.append('xml', xml)
         formData.append('image', imageData)
-        formData.append('format', 'svg')  // 导出格式
+        formData.append('format', format)  // 导出格式
 
         // 如果是更新已有图形，传递文件 ID
         if (this.currentFileId) {
@@ -439,6 +661,19 @@ export class DrawioEditor {
         this.currentFileId = null
         this.currentXml = null
         this.pendingXml = null
+        this.initialXmlSnapshot = null
+        this.isSaving = false
+        this.editorReady = false
+        this.hasPotentialUnsavedChanges = false
+        this.pendingClosePrompt = null
+        this.resolveClosePrompt = null
+        this.pendingExportFormat = null
+        if (this.pendingSaveTimer) {
+            clearTimeout(this.pendingSaveTimer)
+        }
+        this.pendingSaveTimer = null
+        this.hasSaveXmlForCurrentSave = false
+        this.requireExportXmlForCurrentSave = false
     }
 }
 

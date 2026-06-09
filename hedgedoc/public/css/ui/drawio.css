@@ -110,6 +110,70 @@
   background-color: #fafafa;
 }
 
+.drawio-close-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.drawio-close-confirm[hidden] {
+  display: none;
+}
+
+.drawio-close-confirm-dialog {
+  width: min(420px, calc(100% - 32px));
+  background-color: #fff;
+  color: #333;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+  padding: 20px;
+}
+
+.drawio-close-confirm-dialog h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.drawio-close-confirm-dialog p {
+  margin: 0 0 18px;
+  color: #666;
+}
+
+.drawio-close-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.drawio-close-confirm-actions button {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 12px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.drawio-close-confirm-actions button:hover {
+  background-color: #f5f5f5;
+}
+
+.drawio-close-confirm-save {
+  border-color: #2980b9 !important;
+  background-color: #3498db !important;
+  color: #fff !important;
+}
+
+.drawio-close-confirm-discard {
+  border-color: #c0392b !important;
+  color: #c0392b !important;
+}
+
 /* 加载指示器 */
 .drawio-loading {
   position: absolute;
@@ -170,6 +234,41 @@ body.night .drawio-modal-close:hover {
 
 body.night .drawio-modal-body {
   background-color: #333;
+}
+
+body.night .drawio-close-confirm {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+body.night .drawio-close-confirm-dialog {
+  background-color: #2d2d2d;
+  color: #eee;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+body.night .drawio-close-confirm-dialog p {
+  color: #bbb;
+}
+
+body.night .drawio-close-confirm-actions button {
+  border-color: #555;
+  background-color: #333;
+  color: #eee;
+}
+
+body.night .drawio-close-confirm-actions button:hover {
+  background-color: #3d3d3d;
+}
+
+body.night .drawio-close-confirm-save {
+  border-color: #5EB7E0 !important;
+  background-color: #3498db !important;
+  color: #fff !important;
+}
+
+body.night .drawio-close-confirm-discard {
+  border-color: #f66 !important;
+  color: #f66 !important;
 }
 
 body.night .drawio-loading {

@@ -30,18 +30,32 @@ jobs:
           # 使用标签名作为镜像 tag
           ./build.sh hedgedoc ${{ github.ref_name }}
 
-      # 推送镜像到 DockerHub（tag 版本 + latest）
+      - name: Detect prerelease tag
+        id: release_type
+        run: |
+          VERSION="${{ github.ref_name }}"
+          if [[ "$VERSION" == *"-pre"* || "$VERSION" == *"-alpha"* || "$VERSION" == *"-beta"* || "$VERSION" == *"-rc"* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 推送镜像到 DockerHub（预发布只推 tag，正式版额外更新 latest）
       - name: Push to Docker Hub
         run: |
           IMAGE_NAME="nabule/hedge_drawio"
           VERSION="${{ github.ref_name }}"
-          
+
           # 推送对应版本的 tag
           docker push "${IMAGE_NAME}:${VERSION}"
-          
-          # 同时打 latest 标签并推送
-          docker tag "${IMAGE_NAME}:${VERSION}" "${IMAGE_NAME}:latest"
-          docker push "${IMAGE_NAME}:latest"
+
+          if [ "${{ steps.release_type.outputs.is_prerelease }}" = "false" ]; then
+            # 正式版同时打 latest 标签并推送
+            docker tag "${IMAGE_NAME}:${VERSION}" "${IMAGE_NAME}:latest"
+            docker push "${IMAGE_NAME}:latest"
+          else
+            echo "预发布版本 ${VERSION} 不更新 latest 标签"
+          fi
 
       - name: Export and Package
         run: |
@@ -51,14 +65,14 @@ jobs:
           docker save $IMAGE_NAME -o release_pkg/hedgedoc.tar
           cp docker-compose.yml.example release_pkg/
           cp build.sh release_pkg/deploy.sh
-          
+
           # 创建说明文件
           echo "# HedgeDoc + DrawIO ${{ github.ref_name }} 部署说明" > release_pkg/README.md
           echo "" >> release_pkg/README.md
           echo "## 部署步骤" >> release_pkg/README.md
           echo "1. 加载镜像: docker load -i hedgedoc.tar" >> release_pkg/README.md
           echo "2. 启动服务: docker compose up -d" >> release_pkg/README.md
-          
+
           # 压缩
           cd release_pkg
           tar -cvzf ../hedge_drawio_${{ github.ref_name }}_offline.tar.gz .
@@ -68,5 +82,5 @@ jobs:
         with:
           files: hedge_drawio_${{ github.ref_name }}_offline.tar.gz
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.release_type.outputs.is_prerelease }}
           generate_release_notes: true

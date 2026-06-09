@@ -1,6 +1,6 @@
 /**
  * Mind Elixir 思维导图编辑器集成模块
- * 
+ *
  * 提供思维导图的创建、编辑和保存功能
  * 设计参考 DrawIO 集成模块，保持 API 和交互风格一致
  */
@@ -29,6 +29,9 @@ class MindmapEditor {
         this.onSaveCallback = null
         this.isMaximized = false
         this.isSaving = false
+        this.initialDataSnapshot = null
+        this.pendingClosePrompt = null
+        this.resolveClosePrompt = null
     }
 
     /**
@@ -118,6 +121,17 @@ class MindmapEditor {
           </div>
           <div class="mindmap-container" id="mindmap-container"></div>
         </div>
+        <div class="mindmap-close-confirm" role="dialog" aria-modal="true" aria-labelledby="mindmap-close-confirm-title" hidden>
+          <div class="mindmap-close-confirm-dialog">
+            <h3 id="mindmap-close-confirm-title">保存思维导图修改？</h3>
+            <p>当前思维导图有未保存的修改，请选择关闭方式。</p>
+            <div class="mindmap-close-confirm-actions">
+              <button class="mindmap-close-confirm-save" type="button">保存并关闭</button>
+              <button class="mindmap-close-confirm-discard" type="button">不保存关闭</button>
+              <button class="mindmap-close-confirm-cancel" type="button">取消</button>
+            </div>
+          </div>
+        </div>
       </div>
     `
 
@@ -128,13 +142,30 @@ class MindmapEditor {
         const saveBtn = this.modal.querySelector('.mindmap-modal-save')
         const backdrop = this.modal.querySelector('.mindmap-modal-backdrop')
         const header = this.modal.querySelector('.mindmap-modal-header')
+        const closeConfirm = this.modal.querySelector('.mindmap-close-confirm')
+        const closeConfirmSave = this.modal.querySelector('.mindmap-close-confirm-save')
+        const closeConfirmDiscard = this.modal.querySelector('.mindmap-close-confirm-discard')
+        const closeConfirmCancel = this.modal.querySelector('.mindmap-close-confirm-cancel')
 
         // 绑定关闭事件
-        closeBtn.addEventListener('click', () => this.close())
-        backdrop.addEventListener('click', () => this.close())
+        closeBtn.addEventListener('click', () => this.requestClose())
+        backdrop.addEventListener('click', () => this.requestClose())
 
         // 绑定保存事件
         saveBtn.addEventListener('click', () => this.save())
+
+        closeConfirm.addEventListener('click', (e) => {
+            if (e.target === closeConfirm && this.resolveClosePrompt) this.resolveClosePrompt('cancel')
+        })
+        closeConfirmSave.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('save')
+        })
+        closeConfirmDiscard.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('discard')
+        })
+        closeConfirmCancel.addEventListener('click', () => {
+            if (this.resolveClosePrompt) this.resolveClosePrompt('cancel')
+        })
 
         // 绑定复制/导入 JSON 事件
         const copyJsonBtn = this.modal.querySelector('.mindmap-modal-copy-json')
@@ -203,11 +234,118 @@ class MindmapEditor {
                 const newData = MindElixir.new('新思维导图')
                 this.mindElixir.init(newData)
             }
+
+            this.initialDataSnapshot = this.getCurrentDataSnapshot()
         } catch (e) {
             console.error('Mind Elixir 初始化失败:', e)
             alert('思维导图编辑器初始化失败，请检查控制台日志。')
             this.close()
         }
+    }
+
+    /**
+     * 请求关闭编辑器。存在未保存修改时提示先保存。
+     */
+    async requestClose() {
+        if (this.isSaving || this.pendingClosePrompt) return
+
+        if (!this.hasUnsavedChanges()) {
+            this.close()
+            return
+        }
+
+        const action = await this.showCloseConfirm()
+
+        if (action === 'save') {
+            await this.save()
+        } else if (action === 'discard') {
+            this.close()
+        }
+    }
+
+    /**
+     * 判断当前思维导图是否存在未保存修改
+     * @returns {boolean}
+     */
+    hasUnsavedChanges() {
+        if (!this.mindElixir || !this.initialDataSnapshot) {
+            return false
+        }
+
+        return this.getCurrentDataSnapshot() !== this.initialDataSnapshot
+    }
+
+    /**
+     * 获取当前思维导图数据快照
+     * @returns {string}
+     */
+    getCurrentDataSnapshot() {
+        if (!this.mindElixir) {
+            return ''
+        }
+
+        return this.stableStringify(this.getSavableData(this.mindElixir.getData()))
+    }
+
+    /**
+     * 只保留会上传保存的思维导图语义字段，减少运行时状态造成的误提示。
+     * @param {Object} data - Mind Elixir 当前数据
+     * @returns {Object}
+     */
+    getSavableData(data) {
+        if (!data || typeof data !== 'object') {
+            return {}
+        }
+
+        return {
+            nodeData: data.nodeData || null,
+            arrows: data.arrows || [],
+            summaries: data.summaries || [],
+            direction: data.direction,
+            theme: data.theme
+        }
+    }
+
+    /**
+     * 稳定序列化思维导图数据，避免对象 key 顺序影响修改判断
+     * @param {*} value - 要序列化的数据
+     * @returns {string}
+     */
+    stableStringify(value) {
+        if (Array.isArray(value)) {
+            return '[' + value.map(item => this.stableStringify(item)).join(',') + ']'
+        }
+
+        if (value && typeof value === 'object') {
+            return '{' + Object.keys(value).sort().map(key => {
+                return JSON.stringify(key) + ':' + this.stableStringify(value[key])
+            }).join(',') + '}'
+        }
+
+        return JSON.stringify(value)
+    }
+
+    /**
+     * 显示关闭确认层
+     * @returns {Promise<string>} save/discard/cancel
+     */
+    showCloseConfirm() {
+        const closeConfirm = this.modal.querySelector('.mindmap-close-confirm')
+        const saveButton = this.modal.querySelector('.mindmap-close-confirm-save')
+
+        closeConfirm.hidden = false
+        saveButton.focus()
+
+        this.pendingClosePrompt = new Promise(resolve => {
+            this.resolveClosePrompt = (action) => {
+                closeConfirm.hidden = true
+                this.pendingClosePrompt = null
+                this.resolveClosePrompt = null
+                resolve(action)
+            }
+        })
+
+        return this.pendingClosePrompt
     }
 
     /**
@@ -407,12 +545,12 @@ class MindmapEditor {
 
     /**
      * 修复 SVG 中缺失的 summary 标签文字 (v3 改进版)
-     * 
+     *
      * v3改进：
      * 1. 修正正则表达式以支持负数坐标（d属性中包含 h -10 等情况）
      * 2. 将文字元素添加到容器 SVG 的最末尾，确保 Z-index 最高，解决文字被节点背景遮挡的问题
      * 3. 根据连接线长度正负值自动调整文字锚点 (text-anchor)
-     * 
+     *
      * @param {Blob} svgBlob - 原始 SVG Blob
      * @returns {Promise<Blob>} 修复后的 SVG Blob
      */
@@ -534,10 +672,10 @@ class MindmapEditor {
 
     /**
      * 修复 SVG 中缺失的 arrow（连接线）标签文字
-     * 
+     *
      * Mind Elixir 的 exportSvg() 不会导出 arrows 的 label 文本，
      * 本方法通过解析 SVG DOM，为每个有 label 的 arrow 添加文本元素。
-     * 
+     *
      * @param {Blob} svgBlob - 原始 SVG Blob
      * @returns {Promise<Blob>} 修复后的 SVG Blob
      */
@@ -737,6 +875,9 @@ class MindmapEditor {
         this.currentData = null
         this.pendingData = null
         this.isSaving = false
+        this.initialDataSnapshot = null
+        this.pendingClosePrompt = null
+        this.resolveClosePrompt = null
     }
 }
 

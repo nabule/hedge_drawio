@@ -132,6 +132,70 @@
   overflow: hidden;
 }
 
+.mindmap-close-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.mindmap-close-confirm[hidden] {
+  display: none;
+}
+
+.mindmap-close-confirm-dialog {
+  width: min(420px, calc(100% - 32px));
+  background-color: #fff;
+  color: #333;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+  padding: 20px;
+}
+
+.mindmap-close-confirm-dialog h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mindmap-close-confirm-dialog p {
+  margin: 0 0 18px;
+  color: #666;
+}
+
+.mindmap-close-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mindmap-close-confirm-actions button {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 12px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.mindmap-close-confirm-actions button:hover {
+  background-color: #f5f5f5;
+}
+
+.mindmap-close-confirm-save {
+  border-color: #2980b9 !important;
+  background-color: #3498db !important;
+  color: #fff !important;
+}
+
+.mindmap-close-confirm-discard {
+  border-color: #c0392b !important;
+  color: #c0392b !important;
+}
+
 /* Mind Elixir 容器 */
 .mindmap-container {
   width: 100%;

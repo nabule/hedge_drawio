@@ -43,6 +43,7 @@ https://hub.docker.com/r/nabule/hedge_drawio
 | ✅ 插入思维导图 | 工具栏一键插入思维导图 |
 | ✅ 弹窗编辑 | Mind Elixir 编辑器以弹窗形式打开，支持调整大小和最大化 |
 | ✅ 二次编辑 | 点击已插入的思维导图可再次编辑 |
+| ✅ 未保存提醒 | 关闭或点击弹窗空白区域前提示保存未保存修改 |
 | ✅ PNG 导出 | 支持将思维导图导出为 PNG 格式 |
 | ✅ 本地存储 | 思维导图数据以 JSON 格式存储，支持离线编辑 |
 
@@ -184,10 +185,10 @@ docker compose up -d
    ```bash
    # 复制 Docker Compose 配置
    cp docker-compose.yml.example docker-compose.yml
-   
+
    # 复制 Traefik 路由配置
    cp traefik/dynamic/routes.yml.example traefik/dynamic/routes.yml
-   
+
    # 复制 TLS 配置
    cp traefik/dynamic/tls.yml.example traefik/dynamic/tls.yml
    ```
@@ -349,7 +350,17 @@ docker compose down -v
 3. DrawIO 编辑器将自动打开并加载图形
 4. 修改后保存，文档中的图形将自动更新
 
-### 4.3 DrawIO 文件管理
+### 4.3 插入和编辑思维导图
+
+1. 在 HedgeDoc 中打开或创建文档
+2. 进入**编辑模式**（双栏或纯编辑视图）
+3. 点击工具栏中的**思维导图图标**
+4. 在弹出的 Mind Elixir 编辑器中编辑思维导图
+5. 点击**保存**后，思维导图将自动插入到文档中
+6. 编辑已有思维导图时，在**预览区域**中点击思维导图即可再次编辑
+7. 如果编辑后点击关闭按钮或弹窗空白区域，系统会提示选择**保存并关闭**、**不保存关闭**或**取消**；保存失败时编辑器会保持打开
+
+### 4.4 DrawIO 文件管理
 
 访问路径：`http://localhost:3000/drawio-manager`（需登录）
 
@@ -359,7 +370,7 @@ docker compose down -v
   - 原始 XML 文件路径
   - 渲染后的图片文件路径
   - 关联状态（是否被文档引用）
-  
+
 - **下载文件**：
   - 下载原始 XML 文件（可用 DrawIO 桌面版再次编辑）
   - 下载渲染后的图片文件
@@ -369,7 +380,7 @@ docker compose down -v
   - 可单个删除或批量清理孤立文件
   - 清理前会显示将释放的存储空间
 
-### 4.4 自定义 URI 访问
+### 4.5 自定义 URI 访问
 
 启用 `CMD_ALLOW_FREEURL=true` 后，可通过自定义 URI 访问文档：
 
@@ -433,10 +444,19 @@ ZIP 包内容：
   - `DrawioEditor.handleMessage()` - 处理 DrawIO 返回的消息
   - `DrawioEditor.uploadToServer()` - 上传 XML 和图片到服务器
 
+#### 思维导图编辑器集成 (`hedgedoc/public/js/lib/editor/mindmap.js`)
+
+- **通信方式**：通过 Mind Elixir 在弹窗容器内直接渲染和编辑思维导图
+- **主要功能**：
+  - `MindmapEditor.open()` - 打开编辑器（新建或编辑已有思维导图）
+  - `MindmapEditor.requestClose()` - 关闭前检测未保存修改，并提供保存关闭、不保存关闭和取消三种选择
+  - `MindmapEditor.save()` - 导出图片并上传思维导图 JSON 到服务器
+  - `bindMindmapImageClickEvents()` - 为预览区域的思维导图图片添加二次编辑入口
+
 #### 工具栏集成 (`hedgedoc/public/js/lib/editor/ui-elements.js`)
 
-- 在 HedgeDoc 编辑器工具栏添加 DrawIO 插入按钮
-- 为预览区域的 DrawIO 图片添加点击事件监听器
+- 在 HedgeDoc 编辑器工具栏添加 DrawIO 和思维导图插入按钮
+- 为预览区域的 DrawIO 图片和思维导图图片添加点击事件监听器
 
 #### 文件管理路由 (`hedgedoc/lib/web/drawioManagerRouter.js`)
 
@@ -455,8 +475,12 @@ ZIP 包内容：
 /hedgedoc/public/uploads/
 ├── drawio-{uuid}.png      # PNG 格式渲染图片
 ├── drawio-{uuid}.svg      # SVG 格式渲染图片
-└── drawio/
-    └── drawio-{uuid}.xml  # DrawIO XML 源文件
+├── mindmap-{uuid}.png     # PNG 格式思维导图渲染图片
+├── mindmap-{uuid}.svg     # SVG 格式思维导图渲染图片
+├── drawio/
+│   └── drawio-{uuid}.xml  # DrawIO XML 源文件
+└── mindmap/
+    └── mindmap-{uuid}.json # 思维导图 JSON 源文件
 ```
 
 ### 5.3 工作流程
@@ -503,6 +527,29 @@ sequenceDiagram
     H->>U: 刷新预览显示
 ```
 
+#### 思维导图关闭前保存提醒流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant H as HedgeDoc
+    participant M as Mind Elixir
+    participant S as 服务器
+
+    U->>H: 打开思维导图编辑器
+    H->>M: 加载或创建思维导图
+    H->>H: 记录初始数据快照
+    U->>M: 修改思维导图
+    U->>H: 点击关闭按钮或弹窗空白区域
+    H->>H: 对比当前数据和初始快照
+    H->>U: 提示保存并关闭、不保存关闭或取消
+    U->>H: 选择保存并关闭
+    H->>M: 导出图片
+    H->>S: 上传图片和 JSON
+    S-->>H: 返回文件路径
+    H->>U: 保存成功后关闭编辑器
+```
+
 ### 5.4 目录结构
 
 ```
@@ -513,10 +560,12 @@ hedge_drawio/
 │   └── public/
 │       ├── css/ui/
 │       │   ├── drawio.css          # DrawIO 编辑器样式
+│       │   ├── mindmap.css         # 思维导图编辑器样式
 │       │   └── drawio-manager.css  # 管理页面样式
 │       ├── js/
 │       │   ├── lib/editor/
-│       │   │   └── drawio.js       # DrawIO 编辑器模块
+│       │   │   ├── drawio.js       # DrawIO 编辑器模块
+│       │   │   └── mindmap.js      # 思维导图编辑器模块
 │       │   └── drawio-manager.js   # 管理页面脚本
 │       └── views/
 │           └── drawio-manager.ejs  # 管理页面模板

@@ -18,8 +18,12 @@
   ├── *.png, *.jpg, *.svg  # 普通上传图片
   ├── drawio-*.svg         # DrawIO 渲染图片（SVG 格式）
   ├── drawio-*.png         # DrawIO 渲染图片（PNG 格式）
-  └── drawio/              # DrawIO 原始文件
-      └── drawio-*.xml     # DrawIO XML 源文件（可用于再次编辑）
+  ├── mindmap-*.svg        # 思维导图渲染图片（SVG 格式）
+  ├── mindmap-*.png        # 思维导图渲染图片（PNG 格式）
+  ├── drawio/              # DrawIO 原始文件
+  │   └── drawio-*.xml     # DrawIO XML 源文件（可用于再次编辑）
+  └── mindmap/             # 思维导图原始文件
+      └── mindmap-*.json   # 思维导图 JSON 源文件（可用于再次编辑）
   ```
 
 ## 数据备份

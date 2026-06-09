@@ -86,6 +86,10 @@ USER hedgedoc
 ENV NODE_ENV=production
 ENV CMD_PORT=3000
 
+# 记录构建来源提交，用于主界面显示版本和 hash
+ARG GIT_COMMIT
+ENV CMD_GIT_COMMIT=$GIT_COMMIT
+
 # 暴露端口
 EXPOSE 3000
 

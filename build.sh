@@ -33,9 +33,10 @@ build_hedgedoc() {
     echo ">>> 开始构建 HedgeDoc 镜像..."
     
     IMAGE_NAME="nabule/hedge_drawio:$TAG"
+    GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || true)"
     
     # 构建镜像
-    docker build -t "$IMAGE_NAME" -f "$PROJECT_ROOT/docker/hedgedoc/Dockerfile" "$PROJECT_ROOT"
+    docker build --build-arg "GIT_COMMIT=$GIT_COMMIT" -t "$IMAGE_NAME" -f "$PROJECT_ROOT/docker/hedgedoc/Dockerfile" "$PROJECT_ROOT"
     
     echo ">>> HedgeDoc 镜像构建成功: $IMAGE_NAME"
 }

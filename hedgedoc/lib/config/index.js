@@ -19,12 +19,14 @@ const debugConfig = {
 // Get version string from package.json
 const { version, repository } = require(path.join(appRootPath, 'package.json'))
 
-const commitID = getGitCommit(appRootPath)
+const commitID = process.env.CMD_GIT_COMMIT || getGitCommit(appRootPath)
 const sourceURL = getGitHubURL(repository.url, commitID || version)
 const fullversion = commitID ? `${version}-${commitID}` : version
 
 const packageConfig = {
   version,
+  gitCommit: commitID,
+  gitCommitShort: commitID ? commitID.slice(0, 12) : undefined,
   minimumCompatibleVersion: '0.5.0',
   fullversion,
   sourceURL

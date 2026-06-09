@@ -38,6 +38,13 @@ function Build-HedgeDoc {
     Write-Host ">>> 开始构建 HedgeDoc 镜像..." -ForegroundColor Yellow
     
     $imageName = "hedge_drawio/hedgedoc:$Tag"
+    $gitCommit = ""
+    try {
+        $gitCommit = git -C $ProjectRoot rev-parse HEAD 2>$null
+    }
+    catch {
+        $gitCommit = ""
+    }
     
     # 检查源码目录是否存在 (实际上Dockerfile会clone，但保留检查不影响)
     if (-not (Test-Path "$ProjectRoot\hedgedoc")) {
@@ -45,7 +52,7 @@ function Build-HedgeDoc {
     }
     
     # 构建镜像
-    docker build -t $imageName -f "$ProjectRoot\docker\hedgedoc\Dockerfile" $ProjectRoot
+    docker build --build-arg "GIT_COMMIT=$gitCommit" -t $imageName -f "$ProjectRoot\docker\hedgedoc\Dockerfile" $ProjectRoot
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host ">>> HedgeDoc 镜像构建成功: $imageName" -ForegroundColor Green

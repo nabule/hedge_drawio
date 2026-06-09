@@ -221,6 +221,9 @@ app.set('view engine', 'ejs')
 // set generally available variables for all views
 app.locals.serverURL = config.serverURL
 app.locals.sourceURL = config.sourceURL
+app.locals.appVersion = config.version
+app.locals.gitCommit = config.gitCommit
+app.locals.gitCommitShort = config.gitCommitShort
 app.locals.allowAnonymous = config.allowAnonymous
 app.locals.allowAnonymousEdits = config.allowAnonymousEdits
 app.locals.disableNoteCreation = config.disableNoteCreation

@@ -4,7 +4,7 @@
 # ================================
 # 第一阶段：安装依赖并构建前端资源
 # ================================
-FROM node:18-alpine AS builder
+FROM node:18-alpine3.21 AS builder
 
 # 安装构建依赖
 RUN apk add --no-cache \
@@ -29,13 +29,33 @@ RUN yarn build
 # 清理开发依赖，只保留生产依赖
 RUN yarn workspaces focus --production
 
+# 清理运行时不需要的调试/测试产物，保留应用代码、生产依赖和静态资源功能
+RUN find public/build -type f -name '*.map' -delete && \
+    find node_modules -type f -name '*.map' -delete && \
+    find node_modules -type d \( \
+      -name test -o \
+      -name tests -o \
+      -name __tests__ -o \
+      -name example -o \
+      -name examples -o \
+      -name coverage \
+    \) -prune -exec rm -rf '{}' + && \
+    yarn cache clean
+
 # ================================
 # 第二阶段：创建精简的运行时镜像
 # ================================
-FROM node:18-alpine
+FROM alpine:3.21
 
-# 安装运行时依赖（tini 作为 init 进程）
-RUN apk add --no-cache tini
+# 只保留 Node 运行时需要的最小系统依赖和 tini，运行阶段不需要 npm/yarn/corepack
+RUN apk add --no-cache \
+    ca-certificates \
+    libstdc++ \
+    tini
+
+# 从构建阶段复用同 Alpine/musl 环境下的 Node 二进制，并保留官方 Node 镜像的 nodejs 兼容入口
+COPY --from=builder /usr/local/bin/node /usr/local/bin/node
+RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs
 
 # 创建应用目录
 WORKDIR /hedgedoc

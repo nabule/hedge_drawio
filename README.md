@@ -143,6 +143,8 @@ cd hedge_drawio
 docker compose up -d
 ```
 
+构建脚本使用多阶段 Dockerfile。构建阶段固定使用 `node:18-alpine3.21`，运行阶段使用同系列 `alpine:3.21` 并只复制 Node 运行时二进制，不携带 npm/yarn/corepack 等构建工具。运行时镜像会保留 HedgeDoc 服务代码、生产依赖、DrawIO/思维导图静态资源和上传目录，同时剔除 sourcemap、依赖包内测试目录、样例目录和构建缓存，以减小镜像体积且不改变运行功能。
+
 #### 方式三：内外网统一访问（使用 Traefik 网关）
 
 适用于需要通过域名从内网和外网同时访问的场景。
